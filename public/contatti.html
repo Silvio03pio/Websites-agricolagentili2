@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contatti - Agricola Gentili</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header id="dynamic-header"></header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Contatti</h1>
+      <p>Scrivici: rispondiamo il prima possibile.</p>
+    </section>
+
+    <section style="padding: 18px 0;">
+      <h2>Informazioni</h2>
+      <p>
+        <strong>Email:</strong> <a href="mailto:info@agricolagentili.com">info@agricolagentili.com</a><br/>
+        <strong>Telefono:</strong> <a href="tel:+390000000000">+39 000 000 0000</a><br/>
+        <strong>Indirizzo:</strong> Orvieto (TR), Italia
+      </p>
+    </section>
+
+    <section style="padding: 18px 0;">
+      <h2>Scrivici un messaggio</h2>
+
+      <form id="contact-form" style="max-width: 720px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div style="flex:1; min-width: 260px;">
+            <label for="name">Nome e Cognome *</label><br/>
+            <input id="name" name="name" required style="width:100%; padding:10px; margin:8px 0 14px;"/>
+          </div>
+          <div style="flex:1; min-width: 260px;">
+            <label for="email">Email *</label><br/>
+            <input id="email" name="email" type="email" required style="width:100%; padding:10px; margin:8px 0 14px;"/>
+          </div>
+        </div>
+
+        <label for="phone">Telefono</label><br/>
+        <input id="phone" name="phone" style="width:100%; padding:10px; margin:8px 0 14px;"/>
+
+        <label for="subject">Oggetto *</label><br/>
+        <select id="subject" name="subject" required style="width:100%; padding:10px; margin:8px 0 14px;">
+          <option value="">Seleziona...</option>
+          <option value="info">Informazioni prodotti</option>
+          <option value="order">Ordini e spedizioni</option>
+          <option value="wholesale">Rivenditori</option>
+          <option value="visit">Visita in cantina</option>
+          <option value="other">Altro</option>
+        </select>
+
+        <label for="message">Messaggio *</label><br/>
+        <textarea id="message" name="message" required rows="6" style="width:100%; padding:10px; margin:8px 0 14px;"></textarea>
+
+        <label style="display:block; margin: 8px 0 14px;">
+          <input type="checkbox" id="privacy" name="privacy" required />
+          Acconsento al trattamento dei dati personali (Privacy Policy)
+        </label>
+
+        <button type="submit" style="padding:10px 14px; border-radius:10px; border:1px solid #111;">
+          <span class="btn-text">Invia</span>
+          <span class="btn-loading" style="display:none;">Invio...</span>
+        </button>
+      </form>
+
+      <div id="form-success" style="display:none; margin-top:18px;">
+        <h3>Messaggio inviato!</h3>
+        <p>Grazie. Ti risponderemo al più presto.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer id="dynamic-footer"></footer>
+
+  <script src="/js/header.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/contatti.js"></script>
+</body>
+</html>
