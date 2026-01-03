@@ -345,3 +345,44 @@ health.js
 order-status.js
 public-config.js
 stripe-webhook.js
+
+
+## 12) Migliorie future (Roadmap completa)
+
+### 12.1 Ordini e UX (alta priorità)
+- [ ] Email conferma ordine cliente (via Resend)
+- [ ] Email notifica interna “Nuovo ordine” (via Resend)
+- [ ] Pagina “I miei ordini” (B2C) con lista ordini + dettaglio righe (line items)
+- [ ] Pagina “Ordini rivenditore” (B2B) dedicata (storico + dettaglio righe)
+- [ ] Gestione stato ordine: `paid` / `fulfilled` / `shipped` / `refunded` (+ storico stati)
+- [ ] Tracking spedizione: salvataggio tracking number + link corriere + timestamp
+
+### 12.2 Stripe: robustezza pagamenti
+- [ ] Gestire eventi webhook aggiuntivi:
+  - [ ] `payment_intent.succeeded`
+  - [ ] `charge.refunded`
+  - [ ] `checkout.session.async_payment_*`
+- [ ] Salvare in DB indirizzo di spedizione e dettagli cliente (nome, email, telefono se disponibile)
+- [ ] Gestire metodi di pagamento asincroni (se abilitati) con stati “pending/confirmed/failed”
+- [ ] Rendere idempotente la gestione webhook (deduplica eventi + retry safe)
+
+### 12.3 Catalogo avanzato
+- [ ] Pagina prodotto con slug (URL parlante) + metadati SEO (title/description/canonical)
+- [ ] Filtri e ricerca: categoria, prezzo, annata, formato, ecc.
+- [ ] Immagini ottimizzate: WebP/AVIF, responsive sizes, lazy-load
+- [ ] Stock / inventario + flag `active` per gestione disponibilità a catalogo
+- [ ] Struttura categorie/attributi estendibile (per future linee prodotto)
+
+### 12.4 B2B evoluto
+- [ ] Workflow approvazione rivenditori (auto/manuale) con stati: `pending` / `approved` / `rejected`
+- [ ] MOQ e logiche colli/cartoni (quantità minime, multipli per scatola)
+- [ ] Listini multipli per rivenditore (non solo -10%): fasce, eccezioni, promo
+- [ ] Export ordini (CSV) + gestione fatture / DDT (anche integrazione futura)
+- [ ] Regole fiscali B2B (es. validazione P.IVA/VIES, se rilevante)
+
+### 12.5 Sicurezza e operatività
+- [ ] Rate limiting su endpoint pubblici (es. `contact`, `checkout`, `auth`)
+- [ ] Logging strutturato + monitoraggio errori (Sentry o equivalente)
+- [ ] CI GitHub Actions: lint + test + build + preview
+- [ ] Security headers (CSP, HSTS, X-Frame-Options, ecc.)
+- [ ] Audit trail attività admin (chi ha fatto cosa, quando, da dove)
