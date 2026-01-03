@@ -1,208 +1,177 @@
 import { getSupabase } from "/js/supabaseClient.js";
 
-function qs(sel, root = document) { return root.querySelector(sel); }
-function show(el, yes) { if (el) el.style.display = yes ? "" : "none"; }
-function setText(el, t, color = "") { if (el) { el.textContent = t || ""; el.style.color = color || ""; } }
-
-function setFormEnabled(form, enabled) {
-  if (!form) return;
-  [...form.querySelectorAll("input, select, textarea, button")].forEach(el => {
-    el.disabled = !enabled;
-  });
+function qs(sel, root = document) {
+  return root.querySelector(sel);
 }
 
-function normalizeVat(vat) {
-  const v = String(vat || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (!/^(?:[A-Z]{2})?[A-Z0-9]{8,20}$/.test(v)) return null;
-  return v;
+function mountRetailerUI() {
+  const main = document.querySelector("main.container") || document.querySelector("main") || document.body;
+
+  // Se hai già inserito una UI dedicata (sezioni/ids), non ricreare.
+  if (qs("#retailer-content") || qs("#apply-content") || qs("#application-status")) return;
+
+  // UI minimale generata
+  main.innerHTML = `
+    <h1>Area Rivenditori</h1>
+
+    <p id="status" style="opacity:.85;">Verifica accesso in corso...</p>
+
+    <section id="retailer-content" style="display:none; margin-top:18px;">
+      <p>Benvenuto nell’Area Rivenditori.</p>
+      <p>Qui inseriremo il listino dedicato e le condizioni B2B.</p>
+      <button id="btn-logout" type="button">Esci</button>
+    </section>
+
+    <section id="apply-content" style="display:none; margin-top:18px;">
+      <h2>Richiedi accesso rivenditori</h2>
+      <p>Compila i dati aziendali. La richiesta verrà valutata dal team.</p>
+
+      <form id="apply-form" style="max-width:520px; margin-top:12px;">
+        <label>Ragione sociale<br>
+          <input id="company_name" type="text" required>
+        </label><br><br>
+
+        <label>Partita IVA<br>
+          <input id="vat_number" type="text" required>
+        </label><br><br>
+
+        <button type="submit">Invia richiesta</button>
+      </form>
+
+      <div style="margin-top:12px;">
+        <button id="btn-logout-2" type="button">Esci</button>
+      </div>
+    </section>
+
+    <section id="application-status" style="display:none; margin-top:18px;">
+      <h2>Stato richiesta</h2>
+      <p id="application-text"></p>
+      <div style="margin-top:12px;">
+        <button id="btn-logout-3" type="button">Esci</button>
+      </div>
+    </section>
+  `;
 }
 
-function normalizeCountryISO2(v) {
-  const c = String(v || "").trim().toUpperCase();
-  if (!c) return "";
-  if (!/^[A-Z]{2}$/.test(c)) return null;
-  return c;
-}
-
-function formToObject(form) {
-  const fd = new FormData(form);
-  const obj = {};
-  for (const [k, v] of fd.entries()) obj[k] = String(v ?? "").trim();
-  return obj;
-}
-
-async function fetchJson(url, { method = "GET", headers = {}, body } = {}) {
-  const res = await fetch(url, { method, headers, body });
-  const json = await res.json().catch(() => ({}));
-  return { res, json };
+function showOnly(sectionId) {
+  const ids = ["#retailer-content", "#apply-content", "#application-status"];
+  for (const id of ids) {
+    const el = qs(id);
+    if (!el) continue;
+    el.style.display = (id === sectionId) ? "" : "none";
+  }
 }
 
 (async () => {
+  mountRetailerUI();
+
+  const statusEl = qs("#status");
+  const setStatus = (t, isError = false) => {
+    if (!statusEl) return;
+    statusEl.textContent = t;
+    statusEl.style.color = isError ? "crimson" : "inherit";
+  };
+
   const supabase = await getSupabase();
 
-  const statusEl = qs("#ar-status");
-  const secWholesale = qs("#ar-wholesale");
-  const secApply = qs("#ar-apply");
-
-  const form = qs("#retailer-form");
-  const feedbackEl = qs("#retailer-feedback");
-  const loadingEl = qs("#retailer-loading");
-  const btnSubmit = qs("#retailer-submit");
-
-  show(secWholesale, false);
-  show(secApply, false);
-  show(loadingEl, false);
-  setText(statusEl, "Verifica accesso in corso...");
-  setText(feedbackEl, "");
-
+  // 1) Session check
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     location.replace(`/login.html?next=${encodeURIComponent("/area-rivenditori.html")}`);
     return;
   }
 
+  // Logout handlers
+  const logout = async () => {
+    await supabase.auth.signOut();
+    location.replace("/");
+  };
+  qs("#btn-logout")?.addEventListener("click", logout);
+  qs("#btn-logout-2")?.addEventListener("click", logout);
+  qs("#btn-logout-3")?.addEventListener("click", logout);
+
   const userId = session.user.id;
 
-  // role
+  // 2) Leggi ruolo da profiles
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", userId)
-    .maybeSingle();
+    .single();
 
   if (profileErr) {
     console.error(profileErr);
-    setText(statusEl, "Errore recupero profilo. Verifica trigger/RLS.", "crimson");
-    show(secApply, true);
-    setFormEnabled(form, false);
+    setStatus("Errore nel recupero del profilo (profiles). Verifica trigger/RLS.", true);
+    // Fallback: consenti comunque richiesta
+    setStatus("Accesso non ancora abilitato: invia una richiesta.");
+    showOnly("#apply-content");
     return;
   }
 
-  const role = profile?.role || "customer";
-
-  if (role === "retailer" || role === "admin") {
-    setText(statusEl, "Accesso Rivenditori attivo.");
-    show(secWholesale, true);
-    show(secApply, false);
+  // 3) Se retailer o admin: ok
+  if (profile?.role === "retailer" || profile?.role === "admin") {
+    setStatus("Accesso autorizzato.");
+    showOnly("#retailer-content");
     return;
   }
 
-  // application status
-  show(secWholesale, false);
-  show(secApply, true);
-
-  const { data: app, error: appErr } = await supabase
+  // 4) Non retailer: verifica se c'è già una richiesta
+  const { data: existingApp, error: appErr } = await supabase
     .from("retailer_applications")
-    .select("status, notes, company_name, vat_number")
+    .select("status, company_name, vat_number, notes")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (appErr) {
     console.error(appErr);
-    setText(statusEl, "Errore nel recupero della richiesta rivenditore.", "crimson");
-    setFormEnabled(form, true);
-  } else if (!app) {
-    setText(statusEl, "Accesso non abilitato: invia una richiesta.");
-    setFormEnabled(form, true);
-  } else {
-    if (app.status === "pending") {
-      setText(statusEl, `Richiesta PENDING: ${app.company_name} — ${app.vat_number}`);
-      setText(feedbackEl, "Richiesta in verifica. Non puoi reinviare finché è PENDING.");
-      setFormEnabled(form, false);
-      return;
-    }
-
-    if (app.status === "rejected") {
-      const note = app.notes ? ` Motivo: ${app.notes}` : "";
-      setText(statusEl, `Richiesta rifiutata.${note} Puoi correggere e reinviare.`, "crimson");
-      setFormEnabled(form, true);
-    }
-
-    if (app.status === "approved") {
-      setText(statusEl, "Richiesta approvata. Ricarica (o logout/login) per attivare accesso.", "green");
-      setFormEnabled(form, false);
-      return;
-    }
+    setStatus("Errore nel recupero della richiesta rivenditore.", true);
+    showOnly("#apply-content");
+    return;
   }
 
-  // submit -> serverless API
-  form?.addEventListener("submit", async (e) => {
+  if (!existingApp) {
+    setStatus("Accesso non ancora abilitato: invia una richiesta.");
+    showOnly("#apply-content");
+  } else {
+    setStatus("Accesso non ancora abilitato.");
+    let text = `La tua richiesta risulta: ${existingApp.status}.`;
+    if (existingApp.status === "pending") {
+      text += " È in valutazione.";
+    } else if (existingApp.status === "rejected") {
+      text += " È stata rifiutata.";
+      if (existingApp.notes) text += ` Motivo: ${existingApp.notes}`;
+    } else if (existingApp.status === "approved") {
+      text += " È approvata: ricarica la pagina (o fai logout/login) per aggiornare l’accesso.";
+    }
+    qs("#application-text") && (qs("#application-text").textContent = text);
+    showOnly("#application-status");
+  }
+
+  // 5) Submit richiesta
+  qs("#apply-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    setText(feedbackEl, "");
-    show(loadingEl, true);
-    if (btnSubmit) btnSubmit.disabled = true;
+    const company_name = (qs("#company_name")?.value || "").trim();
+    const vat_number = (qs("#vat_number")?.value || "").trim();
 
-    const payload = formToObject(form);
-
-    if (!payload.company_name) {
-      setText(feedbackEl, "Inserisci la ragione sociale.", "crimson");
-      show(loadingEl, false);
-      if (btnSubmit) btnSubmit.disabled = false;
+    if (!company_name || !vat_number) {
+      setStatus("Compila tutti i campi richiesti.", true);
       return;
     }
 
-    const vat = normalizeVat(payload.vat_number);
-    if (!vat) {
-      setText(feedbackEl, "VAT non valida (8–20 alfanumerici, prefisso paese opzionale).", "crimson");
-      show(loadingEl, false);
-      if (btnSubmit) btnSubmit.disabled = false;
+    setStatus("Invio richiesta in corso...");
+
+    const { error } = await supabase
+      .from("retailer_applications")
+      .insert([{ user_id: userId, company_name, vat_number }]);
+
+    if (error) {
+      console.error(error);
+      setStatus(error.message, true);
       return;
     }
-    payload.vat_number = vat;
 
-    const country = normalizeCountryISO2(payload.billing_country || "IT");
-    if (payload.billing_country && !country) {
-      setText(feedbackEl, "Paese non valido: usa ISO2 (es. IT, DE, FR).", "crimson");
-      show(loadingEl, false);
-      if (btnSubmit) btnSubmit.disabled = false;
-      return;
-    }
-    if (country) payload.billing_country = country;
-
-    try {
-      const { res, json } = await fetchJson("/api/retailer-apply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok || !json.ok) {
-        setText(feedbackEl, json?.error || `Errore (HTTP ${res.status})`, "crimson");
-        console.error(json);
-        return;
-      }
-
-      if (json.status === "approved") {
-        setText(feedbackEl, "Approvato: puoi entrare nell’Area Rivenditori. Controlla l’email.", "green");
-        setTimeout(() => location.reload(), 700);
-        return;
-      }
-
-      if (json.status === "pending") {
-        setText(feedbackEl, "Richiesta in verifica (PENDING). Non puoi reinviare finché è pending.");
-        setFormEnabled(form, false);
-        setTimeout(() => location.reload(), 700);
-        return;
-      }
-
-      if (json.status === "rejected") {
-        setText(feedbackEl, `Richiesta rifiutata: ${json.reason || "verifica VAT non superata"}`, "crimson");
-        setFormEnabled(form, true);
-        return;
-      }
-
-      setText(feedbackEl, "Richiesta inviata.");
-      setTimeout(() => location.reload(), 700);
-    } catch (err) {
-      console.error(err);
-      setText(feedbackEl, "Errore di rete.", "crimson");
-    } finally {
-      show(loadingEl, false);
-      if (btnSubmit) btnSubmit.disabled = false;
-    }
+    setStatus("Richiesta inviata. Verrà valutata dal team.");
+    location.reload();
   });
 })();

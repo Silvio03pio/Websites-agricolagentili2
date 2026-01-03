@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Area Rivenditori - Agricola Gentili</title>
+  <title>TITOLO - Agricola Gentili</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,137 +11,8 @@
   <header id="dynamic-header"></header>
 
   <main class="container">
-    <h1>Area Rivenditori</h1>
-
-    <!-- Stato pagina: login/ruolo/stato richiesta -->
-    <div id="ar-status" style="opacity:.85; margin-top:8px;"></div>
-
-    <!-- Se l'utente è approvato come retailer -->
-    <section id="ar-wholesale" style="display:none; margin-top:18px;">
-      <h2>Accesso Rivenditori attivo</h2>
-      <p style="opacity:.9;">
-        Benvenuto. Da qui potrai accedere a contenuti e listino dedicati.
-      </p>
-
-      <!-- Placeholder: qui in futuro metti listino/ordini/condizioni B2B -->
-      <div style="margin-top:14px; padding:14px; border:1px solid rgba(0,0,0,.12); border-radius:12px;">
-        <strong>Prossimo step:</strong> listino B2B e condizioni rivenditori.
-      </div>
-    </section>
-
-    <!-- Se l'utente NON è retailer: mostra richiesta -->
-    <section id="ar-apply" style="display:none; margin-top:18px;">
-      <h2>Richiesta accesso Area Rivenditori</h2>
-      <p style="opacity:.9; margin-top:6px;">
-        Compila i dati aziendali. La richiesta verrà verificata dal team. Riceverai un’email di conferma.
-      </p>
-
-      <!-- Messaggi form (validazione/errore/successo) -->
-      <div id="retailer-feedback" style="margin-top:10px;"></div>
-
-      <form id="retailer-form" autocomplete="on"
-            style="display:flex; flex-direction:column; gap:12px; max-width:560px; margin-top:12px;">
-
-        <fieldset style="border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:14px;">
-          <legend style="padding:0 8px; opacity:.85;">Dati aziendali</legend>
-
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            Ragione sociale <span style="opacity:.7;">(obbligatorio)</span>
-            <input name="company_name" type="text" required maxlength="160"
-                   placeholder="Es. Agricola Gentili S.r.l." />
-          </label>
-
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            VAT / Partita IVA <span style="opacity:.7;">(obbligatorio)</span>
-            <input name="vat_number" type="text" required maxlength="32"
-                   placeholder="Es. IT01234567890 oppure DE123456789" />
-            <small style="opacity:.75;">
-              Accettiamo VAT internazionali. Inserisci codice paese (opzionale) + numeri/lettere.
-            </small>
-          </label>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              PEC <span style="opacity:.7;">(opzionale)</span>
-              <input name="pec_email" type="email" maxlength="255" placeholder="pec@pec.it" />
-            </label>
-
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Codice SDI <span style="opacity:.7;">(opzionale)</span>
-              <input name="sdi_code" type="text" maxlength="16" placeholder="ABCDEFG" />
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset style="border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:14px;">
-          <legend style="padding:0 8px; opacity:.85;">Referente</legend>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Nome referente <span style="opacity:.7;">(opzionale)</span>
-              <input name="contact_name" type="text" maxlength="120" placeholder="Nome e Cognome" />
-            </label>
-
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Telefono referente <span style="opacity:.7;">(opzionale)</span>
-              <input name="contact_phone" type="text" maxlength="32" placeholder="+39 3xx xxx xxxx" />
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset style="border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:14px;">
-          <legend style="padding:0 8px; opacity:.85;">Indirizzo di fatturazione</legend>
-
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            Indirizzo <span style="opacity:.7;">(consigliato)</span>
-            <input name="billing_line1" type="text" maxlength="160"
-                   placeholder="Via, numero civico" />
-          </label>
-
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            Interno / Linea 2 <span style="opacity:.7;">(opzionale)</span>
-            <input name="billing_line2" type="text" maxlength="160"
-                   placeholder="Scala, interno, ecc." />
-          </label>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Città <span style="opacity:.7;">(consigliato)</span>
-              <input name="billing_city" type="text" maxlength="80" placeholder="Città" />
-            </label>
-
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              CAP <span style="opacity:.7;">(consigliato)</span>
-              <input name="billing_postal_code" type="text" maxlength="20" placeholder="CAP" />
-            </label>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Provincia / Stato <span style="opacity:.7;">(opzionale)</span>
-              <input name="billing_state" type="text" maxlength="80" placeholder="Provincia / Stato" />
-            </label>
-
-            <label style="display:flex; flex-direction:column; gap:6px;">
-              Paese (ISO2) <span style="opacity:.7;">(consigliato)</span>
-              <input name="billing_country" type="text" maxlength="2" value="IT"
-                     placeholder="IT" />
-            </label>
-          </div>
-        </fieldset>
-
-        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:4px;">
-          <button id="retailer-submit" type="submit">Invia richiesta</button>
-          <div id="retailer-loading" style="display:none; opacity:.8;">Invio in corso...</div>
-        </div>
-
-        <p style="margin:10px 0 0; opacity:.75; font-size:12px;">
-          Nota: la richiesta lascia lo stato <strong>pending</strong> finché non viene approvata dal team.
-        </p>
-
-      </form>
-    </section>
-
+    <h1>TITOLO</h1>
+    <p>Pagina in costruzione.</p>
   </main>
 
   <footer id="dynamic-footer"></footer>
@@ -149,5 +20,6 @@
   <script src="/js/header.js"></script>
   <script src="/js/footer.js"></script>
   <script type="module" src="/js/area-rivenditori.js"></script>
+
 </body>
 </html>
