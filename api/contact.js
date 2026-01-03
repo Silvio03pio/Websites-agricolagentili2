@@ -21,12 +21,11 @@ module.exports = async (req, res) => {
       website = "" // honeypot
     } = body;
 
-    // Anti-bot
+    // Honeypot anti-bot
     if (String(website).trim().length > 0) {
       return res.status(200).json({ ok: true });
     }
 
-    // Validazioni minime
     const cleanName = String(name).trim();
     const cleanEmail = String(email).trim();
     const cleanPhone = String(phone).trim();
@@ -39,22 +38,25 @@ module.exports = async (req, res) => {
     }
     if (!isValidEmail(cleanEmail)) return res.status(400).json({ error: "Email non valida." });
 
-    // Env
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL;
-    const CONTACT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL;
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      RESEND_API_KEY,
+      CONTACT_TO_EMAIL,
+      CONTACT_FROM_EMAIL
+    } = process.env;
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({ error: "Configurazione Supabase mancante." });
     }
-    if (!RESEND_API_KEY) return res.status(500).json({ error: "Configurazione Resend mancante." });
+    if (!RESEND_API_KEY) {
+      return res.status(500).json({ error: "Configurazione Resend mancante." });
+    }
     if (!CONTACT_TO_EMAIL || !CONTACT_FROM_EMAIL) {
       return res.status(500).json({ error: "Email di contatto non configurate." });
     }
 
-    // 1) Salvataggio su Supabase
+    // 1) Insert in Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: inserted, error: dbErr } = await supabase
@@ -74,7 +76,7 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: "Errore salvataggio del messaggio." });
     }
 
-    // 2) Invio email con Resend
+    // 2) Send email (best-effort)
     const resend = new Resend(RESEND_API_KEY);
 
     const html = `
@@ -98,7 +100,6 @@ module.exports = async (req, res) => {
 
     if (send?.error) {
       console.error("[RESEND ERROR]", send.error);
-      // Non blocchiamo: il messaggio è già salvato
       return res.status(200).json({ ok: true, id: inserted?.id, warning: "Salvato ma email non inviata." });
     }
 

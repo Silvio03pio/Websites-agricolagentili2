@@ -5,21 +5,16 @@ export default function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-  const debug = {
-    vercelEnv: process.env.VERCEL_ENV || null,          // production / preview / development
-    hasSupabaseUrl: Boolean(supabaseUrl),
-    hasSupabaseAnonKey: Boolean(supabaseAnonKey),
-  };
-
   if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ ok: false, error: "Missing SUPABASE_URL or SUPABASE_ANON_KEY", debug });
+    return res
+      .status(500)
+      .json({ ok: false, error: "Missing SUPABASE_URL or SUPABASE_ANON_KEY" });
   }
 
-  // L'anon key è pubblica; serve al browser.
+  // L'anon key è pubblica per definizione: serve al browser per usare Supabase con RLS.
   return res.status(200).json({
     ok: true,
     supabaseUrl,
     supabaseAnonKey,
-    debug,
   });
 }
