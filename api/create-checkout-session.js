@@ -121,21 +121,36 @@ export default async function handler(req, res) {
     const baseUrl = `${proto}://${host}`;
 
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items,
-      // fondamentale per post-payment verification
-      success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/cancel.html`,
+  mode: "payment",
+  line_items,
 
-      // tracciabilità
-      client_reference_id: userId,
+  // fondamentale per post-payment verification
+  success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${baseUrl}/cancel.html`,
 
-      // Stripe user email
-      ...(userEmail ? { customer_email: userEmail } : {}),
+  // tracciabilità
+  client_reference_id: userId,
 
-      // metadata su sessione (utile nel webhook)
-      metadata: { user_id: userId, role }
-    });
+  // Stripe user email
+  ...(userEmail ? { customer_email: userEmail } : {}),
+
+  // ====== NUOVO: raccolta dati checkout ======
+  // Spedizione (obbligatoria) - parti con IT, poi estendi quando vuoi
+  shipping_address_collection: {
+    allowed_countries: ["IT"],
+  },
+
+  // Telefono (consigliato)
+  phone_number_collection: { enabled: true },
+
+  // Fatturazione (consigliato: così hai address anche come billing)
+  billing_address_collection: "required",
+  // ==========================================
+
+  // metadata su sessione (utile nel webhook)
+  metadata: { user_id: userId, role }
+});
+
 
     return res.status(200).json({ ok: true, url: session.url });
   } catch (e) {
