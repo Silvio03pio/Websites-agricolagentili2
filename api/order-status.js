@@ -19,13 +19,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "Missing session_id" });
   }
 
+  // Checkout status SOLO per utenti loggati (verifica identità)
   const auth = req.headers.authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
   if (!token) return res.status(401).json({ ok: false, error: "Unauthorized" });
 
   const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
-  // valida user
   const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
   if (userErr || !userData?.user) {
     return res.status(401).json({ ok: false, error: "Invalid session" });
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (ordErr) return res.status(500).json({ ok: false, error: "Query failed" });
+  if (ordErr) return res.status(500).json({ ok: false, error: "Query failed", details: ordErr.message });
   if (!order) return res.status(404).json({ ok: false, error: "Order not found yet" });
 
   return res.status(200).json({ ok: true, order });
