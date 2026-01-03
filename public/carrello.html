@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carrello - Agricola Gentili</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header id="dynamic-header"></header>
+
+  <main class="container">
+    <h1>Carrello</h1>
+
+    <div id="cart-status" style="opacity:.85;"></div>
+    <section id="cart-items" style="display:flex; flex-direction:column; gap:12px; margin-top:16px;"></section>
+
+    <div style="margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <strong id="cart-total"></strong>
+      <a href="/negozio.html">Continua lo shopping</a>
+      <!-- qui più avanti metteremo il checkout -->
+      <button id="btn-checkout" type="button" disabled>Checkout (prossimo step)</button>
+    </div>
+  </main>
+
+  <footer id="dynamic-footer"></footer>
+
+  <script src="/js/header.js"></script>
+  <script src="/js/footer.js"></script>
+  <script type="module" src="/js/carrello.js"></script>
+</body>
+</html>

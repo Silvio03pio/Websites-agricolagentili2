@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TITOLO - Agricola Gentili</title>
+  <title>Negozio - Agricola Gentili</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,13 +11,27 @@
   <header id="dynamic-header"></header>
 
   <main class="container">
-    <h1>TITOLO</h1>
-    <p>Pagina in costruzione.</p>
+    <h1>Negozio</h1>
+
+    <div id="shop-status" style="opacity:.85;">Caricamento prodotti...</div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin:16px 0;">
+      <select id="filter-category">
+        <option value="all">Tutti</option>
+        <option value="vino">Vini</option>
+        <option value="olio">Olio</option>
+      </select>
+
+      <a href="/carrello.html">Vai al carrello</a>
+    </div>
+
+    <section id="product-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;"></section>
   </main>
 
   <footer id="dynamic-footer"></footer>
 
   <script src="/js/header.js"></script>
   <script src="/js/footer.js"></script>
+  <script type="module" src="/js/negozio.js"></script>
 </body>
 </html>
