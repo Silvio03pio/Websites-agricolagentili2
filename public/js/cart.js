@@ -44,7 +44,3 @@ export function removeItem(productId) {
 export function clearCart() {
   writeCart({ items: [] });
 }
-
-export function clearCart() {
-  localStorage.setItem(CART_KEY, JSON.stringify({ items: [] }));
-}
