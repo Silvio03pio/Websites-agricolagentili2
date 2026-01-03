@@ -2,6 +2,13 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import getRawBody from "raw-body";
 
+// FONDAMENTALE: Stripe signature vuole i bytes raw, non body parsato
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -33,11 +40,22 @@ export default async function handler(req, res) {
   let event;
   try {
     const sig = req.headers["stripe-signature"];
-    const rawBody = await getRawBody(req); // Buffer raw, fondamentale
+    if (!sig) {
+      return res.status(400).json({
+        ok: false,
+        error: "Missing Stripe-Signature header",
+      });
+    }
+
+    const rawBody = await getRawBody(req);
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
-    // questo è l'errore che vedi ora
-    return res.status(400).send("Webhook signature verification failed");
+    // IMPORTANT: restituiamo dettagli per capire se è whsec errato o body alterato
+    return res.status(400).json({
+      ok: false,
+      error: "Webhook signature verification failed",
+      details: String(err?.message || err),
+    });
   }
 
   try {
@@ -49,7 +67,7 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (existing?.id) {
-      return res.status(200).json({ received: true, duplicate: true });
+      return res.status(200).json({ ok: true, received: true, duplicate: true });
     }
 
     await supabaseAdmin.from("stripe_events").insert({ id: event.id });
@@ -61,11 +79,14 @@ export default async function handler(req, res) {
       const role = session?.metadata?.role || "customer";
 
       if (!userId) {
-        // orders.user_id è NOT NULL: se manca qui, non potrà inserire
-        return res.status(500).json({ received: false, error: "Missing metadata.user_id" });
+        return res.status(500).json({
+          ok: false,
+          error: "Missing session.metadata.user_id",
+          details: { session_id: session?.id || null, metadata: session?.metadata || null },
+        });
       }
 
-      // line items con metadata del product (per product_id Supabase)
+      // Line items + metadata prodotto (product_id Supabase)
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
         limit: 100,
         expand: ["data.price.product"],
@@ -78,7 +99,6 @@ export default async function handler(req, res) {
 
       const status = paymentStatus === "paid" ? "paid" : "created";
 
-      // inserisci/aggiorna ordine
       const orderPayload = {
         user_id: userId,
         role,
@@ -92,7 +112,7 @@ export default async function handler(req, res) {
         updated_at: new Date().toISOString(),
       };
 
-      // insert o update by unique stripe_session_id
+      // insert o update by stripe_session_id
       let orderId = null;
 
       const { data: inserted, error: insErr } = await supabaseAdmin
@@ -104,18 +124,25 @@ export default async function handler(req, res) {
       if (!insErr) {
         orderId = inserted?.id;
       } else {
-        const { data: existingOrder } = await supabaseAdmin
+        const { data: existingOrder, error: selErr } = await supabaseAdmin
           .from("orders")
           .select("id")
           .eq("stripe_session_id", session.id)
           .single();
 
+        if (selErr) throw selErr;
+
         orderId = existingOrder.id;
 
-        await supabaseAdmin.from("orders").update(orderPayload).eq("id", orderId);
+        const { error: updErr } = await supabaseAdmin
+          .from("orders")
+          .update(orderPayload)
+          .eq("id", orderId);
+
+        if (updErr) throw updErr;
       }
 
-      // inserisci items se non già presenti
+      // Inserisci items solo se non presenti
       const { data: existingItems } = await supabaseAdmin
         .from("order_items")
         .select("id")
@@ -129,7 +156,7 @@ export default async function handler(req, res) {
 
           return {
             order_id: orderId,
-            product_id: supabaseProductId, // UUID Supabase (se presente)
+            product_id: supabaseProductId, // UUID Supabase
             name_snapshot: li.description || stripeProduct?.name || "Prodotto",
             unit_amount_cents: li.price?.unit_amount ?? 0,
             qty: li.quantity || 1,
@@ -137,13 +164,18 @@ export default async function handler(req, res) {
           };
         });
 
-        await supabaseAdmin.from("order_items").insert(itemsToInsert);
+        const { error: itemsErr } = await supabaseAdmin.from("order_items").insert(itemsToInsert);
+        if (itemsErr) throw itemsErr;
       }
     }
 
-    return res.status(200).json({ received: true });
+    return res.status(200).json({ ok: true, received: true, event_type: event.type });
   } catch (err) {
-    console.error("[WEBHOOK ERROR]", err?.message || err);
-    return res.status(500).send("Webhook handler failed");
+    return res.status(500).json({
+      ok: false,
+      error: "Webhook handler failed",
+      details: String(err?.message || err),
+      event_type: event?.type || null,
+    });
   }
 }
