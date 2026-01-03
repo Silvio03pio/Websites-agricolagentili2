@@ -1,199 +1,404 @@
 import { getSupabase } from "/js/supabaseClient.js";
-import { readCart, updateQty, removeItem } from "/js/cart.js";
 import { formatEUR, priceForRole, getCurrentUserRole } from "/js/pricing.js";
 
-function qs(sel) { return document.querySelector(sel); }
+// ============ CONFIG STORAGE ============
+const CART_KEY = "ag_cart_v1";
 
-const POST_LOGIN_CHECKOUT_KEY = "ag_post_login_checkout_v1";
+// ============ HELPERS ============
+function qs(sel, root = document) { return root.querySelector(sel); }
 
-function lineItemRow(p, qty, lineTotalCents) {
-  const row = document.createElement("div");
-  row.style.border = "1px solid rgba(0,0,0,.12)";
-  row.style.borderRadius = "12px";
-  row.style.padding = "12px";
-  row.style.display = "flex";
-  row.style.justifyContent = "space-between";
-  row.style.gap = "12px";
-  row.style.alignItems = "center";
-
-  row.innerHTML = `
-    <div style="min-width: 0;">
-      <div><strong>${p.name}</strong></div>
-      <div style="opacity:.8;">${p.category.toUpperCase()} • ${Number(p.volume_liters).toFixed(3)} L</div>
-      <div style="opacity:.9; margin-top:6px;">Totale riga: <strong>${formatEUR(lineTotalCents)}</strong></div>
-    </div>
-
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-      <label>Qtà
-        <input type="number" min="0" step="1" value="${qty}" style="width:72px;" data-qty="${p.id}">
-      </label>
-      <button type="button" data-remove="${p.id}">Rimuovi</button>
-    </div>
-  `;
-  return row;
+function isValidEmail(e) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
 }
 
-async function startCheckout(supabase) {
-  const statusEl = qs("#cart-status");
-  const btn = qs("#btn-checkout");
-  if (btn) btn.disabled = true;
-  if (statusEl) statusEl.textContent = "Avvio checkout in corso...";
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    // Non loggato: salva intento checkout e vai al login
-    localStorage.setItem(POST_LOGIN_CHECKOUT_KEY, "1");
-    location.replace(`/login.html?next=${encodeURIComponent("/carrello.html")}`);
-    return;
-  }
-
-  const cart = readCart();
-  if (!cart.items.length) {
-    if (statusEl) statusEl.textContent = "Il carrello è vuoto.";
-    if (btn) btn.disabled = false;
-    return;
-  }
-
+function readCart() {
   try {
-    const res = await fetch("/api/create-checkout-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ items: cart.items })
-    });
-
-    const payload = await res.json().catch(() => ({}));
-
-    if (!res.ok || !payload?.ok || !payload?.url) {
-      const msg = payload?.error || `Errore checkout (HTTP ${res.status})`;
-      if (statusEl) {
-        statusEl.textContent = msg;
-        statusEl.style.color = "crimson";
-      }
-      if (btn) btn.disabled = false;
-      return;
-    }
-
-    // Redirect a Stripe Checkout
-    location.href = payload.url;
-  } catch (e) {
-    console.error(e);
-    if (statusEl) {
-      statusEl.textContent = "Errore di rete durante il checkout.";
-      statusEl.style.color = "crimson";
-    }
-    if (btn) btn.disabled = false;
+    const raw = localStorage.getItem(CART_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
   }
 }
 
+function writeCart(items) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items || []));
+}
+
+function setQty(productId, qty) {
+  const cart = readCart();
+  const q = Math.max(0, Math.min(99, Math.floor(Number(qty || 0))));
+  const idx = cart.findIndex(i => i.productId === productId);
+
+  if (q <= 0) {
+    if (idx >= 0) cart.splice(idx, 1);
+  } else {
+    if (idx >= 0) cart[idx].qty = q;
+    else cart.push({ productId, qty: q });
+  }
+
+  writeCart(cart);
+  return cart;
+}
+
+function clearCart() {
+  writeCart([]);
+}
+
+async function fetchJson(url, { method = "GET", headers = {}, body } = {}) {
+  const res = await fetch(url, { method, headers, body });
+  const json = await res.json().catch(() => ({}));
+  return { res, json };
+}
+
+// ============ UI ============
+function setText(el, txt, isError = false) {
+  if (!el) return;
+  el.textContent = txt || "";
+  el.style.color = isError ? "crimson" : "";
+}
+
+function setVisible(el, visible) {
+  if (!el) return;
+  el.style.display = visible ? "" : "none";
+}
+
+function moneyLine(cents) {
+  return formatEUR(cents);
+}
+
+// ============ MAIN ============
 (async () => {
   const statusEl = qs("#cart-status");
   const itemsEl = qs("#cart-items");
   const totalEl = qs("#cart-total");
-  const btnCheckout = qs("#btn-checkout");
 
-  const cart = readCart();
-  if (!cart.items.length) {
-    if (statusEl) statusEl.textContent = "Il carrello è vuoto.";
+  const authStatusEl = qs("#auth-status");
+  const authActionsEl = qs("#auth-actions");
+  const authLoggedEl = qs("#auth-logged");
+  const authEmailEl = qs("#auth-email");
+  const authWarningEl = qs("#auth-warning");
+
+  const checkoutAuthEl = qs("#checkout-auth");
+  const checkoutGuestEl = qs("#checkout-guest");
+  const btnAuth = qs("#btn-checkout-auth");
+  const btnGuest = qs("#btn-checkout-guest");
+  const guestEmailInput = qs("#guest-email");
+  const guestHint = qs("#guest-hint");
+
+  const supabase = await getSupabase();
+
+  // ruolo per prezzi (retailer => -10%) — lato UI
+  const { role } = await getCurrentUserRole();
+  const isRetailer = role === "retailer";
+
+  // carrello locale
+  let cart = readCart();
+  if (!cart.length) {
+    setText(statusEl, "Il carrello è vuoto.");
+    if (itemsEl) itemsEl.innerHTML = "";
     if (totalEl) totalEl.textContent = "";
-    if (btnCheckout) btnCheckout.disabled = true;
+    if (btnAuth) btnAuth.disabled = true;
+    if (btnGuest) btnGuest.disabled = true;
+    setText(authStatusEl, "Nessun prodotto nel carrello.");
+    setVisible(checkoutAuthEl, false);
+    setVisible(checkoutGuestEl, false);
     return;
   }
 
-  if (statusEl) statusEl.textContent = "Caricamento carrello...";
+  // session / auth state
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user || null;
 
-  const supabase = await getSupabase();
-  const { role } = await getCurrentUserRole();
+  // email confermata: in Supabase può chiamarsi confirmed_at o email_confirmed_at
+  const emailConfirmedAt = user?.email_confirmed_at || user?.confirmed_at || null;
+  const isEmailConfirmed = Boolean(emailConfirmedAt);
 
-  const ids = cart.items.map(i => i.productId);
+  // UI auth panel
+  if (!user) {
+    setText(authStatusEl, "Non sei loggato.");
+    setVisible(authActionsEl, true);
+    setVisible(authLoggedEl, false);
+  } else {
+    setText(authStatusEl, "Sei loggato.");
+    setVisible(authActionsEl, false);
+    setVisible(authLoggedEl, true);
+    if (authEmailEl) authEmailEl.textContent = user.email || "-";
 
-  const { data: products, error } = await supabase
+    if (!isEmailConfirmed) {
+      setVisible(authWarningEl, true);
+      setText(authWarningEl, "Email non confermata: puoi confermare via link ricevuto, oppure procedere come ospite.");
+    } else {
+      setVisible(authWarningEl, false);
+      setText(authWarningEl, "");
+    }
+  }
+
+  // Carica prodotti da Supabase
+  const ids = [...new Set(cart.map(i => i.productId))];
+
+  const { data: products, error: prodErr } = await supabase
     .from("products")
-    .select("id, name, category, volume_liters, price_cents, currency, active")
+    .select("id, name, price_cents, currency, active")
     .in("id", ids);
 
-  if (error) {
-    console.error(error);
-    if (statusEl) {
-      statusEl.textContent = "Errore caricamento carrello.";
-      statusEl.style.color = "crimson";
-    }
-    if (btnCheckout) btnCheckout.disabled = true;
+  if (prodErr) {
+    console.error(prodErr);
+    setText(statusEl, "Errore nel caricamento prodotti del carrello.", true);
+    if (btnAuth) btnAuth.disabled = true;
+    if (btnGuest) btnGuest.disabled = true;
+    setVisible(checkoutAuthEl, false);
+    setVisible(checkoutGuestEl, false);
     return;
   }
 
   const map = new Map((products || []).map(p => [p.id, p]));
 
-  function render() {
-    if (!itemsEl || !totalEl) return;
+  // filtra prodotti non più acquistabili
+  cart = cart.filter(i => {
+    const p = map.get(i.productId);
+    return p && p.active === true;
+  });
+
+  if (!cart.length) {
+    clearCart();
+    setText(statusEl, "Il carrello è vuoto.");
+    if (itemsEl) itemsEl.innerHTML = "";
+    if (totalEl) totalEl.textContent = "";
+    if (btnAuth) btnAuth.disabled = true;
+    if (btnGuest) btnGuest.disabled = true;
+    setVisible(checkoutAuthEl, false);
+    setVisible(checkoutGuestEl, false);
+    return;
+  }
+
+  function computeTotal() {
+    let total = 0;
+    for (const row of cart) {
+      const p = map.get(row.productId);
+      if (!p) continue;
+      const unit = priceForRole(p.price_cents, role);
+      total += unit * row.qty;
+    }
+    return total;
+  }
+
+  function renderCart() {
+    if (!itemsEl) return;
 
     itemsEl.innerHTML = "";
     let total = 0;
 
-    const current = readCart().items;
-
-    for (const item of current) {
-      const p = map.get(item.productId);
-
-      // prodotto mancante o non attivo: lo segnaliamo e lo escludiamo dal totale
-      if (!p || p.active !== true) {
-        const warn = document.createElement("div");
-        warn.style.border = "1px solid rgba(0,0,0,.12)";
-        warn.style.borderRadius = "12px";
-        warn.style.padding = "12px";
-        warn.innerHTML = `<strong>Prodotto non disponibile</strong><div style="opacity:.8;">Rimuovilo dal carrello per procedere.</div>`;
-        itemsEl.appendChild(warn);
-        continue;
-      }
+    for (const row of cart) {
+      const p = map.get(row.productId);
+      if (!p) continue;
 
       const unit = priceForRole(p.price_cents, role);
-      const line = unit * item.qty;
+      const line = unit * row.qty;
       total += line;
 
-      itemsEl.appendChild(lineItemRow(p, item.qty, line));
+      const item = document.createElement("div");
+      item.style.border = "1px solid rgba(0,0,0,.12)";
+      item.style.borderRadius = "12px";
+      item.style.padding = "12px";
+      item.style.display = "flex";
+      item.style.gap = "12px";
+      item.style.alignItems = "center";
+      item.style.justifyContent = "space-between";
+
+      item.innerHTML = `
+        <div style="min-width:0;">
+          <div style="font-weight:700;">${p.name}</div>
+          <div style="opacity:.8; font-size:13px;">${isRetailer ? "Prezzo rivenditore (-10%)" : "Prezzo cliente"}</div>
+          <div style="margin-top:6px;"><strong>${moneyLine(unit)}</strong> <span style="opacity:.8;">/ cad.</span></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+          <label style="display:flex; align-items:center; gap:6px;">
+            Qtà
+            <input type="number" min="1" max="99" value="${row.qty}" data-qty="${p.id}" style="width:72px;">
+          </label>
+
+          <div style="min-width:110px; text-align:right;">
+            <div style="opacity:.75; font-size:12px;">Totale riga</div>
+            <div style="font-weight:700;">${moneyLine(line)}</div>
+          </div>
+
+          <button type="button" data-remove="${p.id}">Rimuovi</button>
+        </div>
+      `;
+
+      itemsEl.appendChild(item);
     }
 
-    totalEl.textContent = `Totale: ${formatEUR(total)}`;
-    if (statusEl) {
-      statusEl.textContent = role === "retailer"
-        ? "Prezzi rivenditore (-10%) applicati."
-        : "Controlla quantità e procedi al checkout.";
-      statusEl.style.color = "inherit";
-    }
+    setText(statusEl, "Controlla quantità e procedi al checkout.");
+    if (totalEl) totalEl.textContent = `Totale: ${moneyLine(total)}`;
 
-    // Enable checkout solo se totale > 0
-    if (btnCheckout) btnCheckout.disabled = total <= 0;
-
+    // bind qty
     itemsEl.querySelectorAll("input[data-qty]").forEach(inp => {
       inp.addEventListener("change", () => {
         const id = inp.getAttribute("data-qty");
-        const qty = Math.max(0, parseInt(inp.value || "0", 10));
-        updateQty(id, qty);
-        render();
+        const val = Number(inp.value || 1);
+        cart = setQty(id, val);
+        renderCart();
+        updateCheckoutButtons();
       });
     });
 
+    // bind remove
     itemsEl.querySelectorAll("button[data-remove]").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-remove");
-        removeItem(id);
-        location.reload();
+        cart = setQty(id, 0);
+
+        if (!cart.length) {
+          clearCart();
+          setText(statusEl, "Il carrello è vuoto.");
+          if (itemsEl) itemsEl.innerHTML = "";
+          if (totalEl) totalEl.textContent = "";
+          if (btnAuth) btnAuth.disabled = true;
+          if (btnGuest) btnGuest.disabled = true;
+          setVisible(checkoutAuthEl, false);
+          setVisible(checkoutGuestEl, false);
+          return;
+        }
+
+        renderCart();
+        updateCheckoutButtons();
       });
     });
   }
 
-  render();
+  function updateCheckoutButtons() {
+    const total = computeTotal();
+    const hasItems = cart.length > 0 && total > 0;
 
-  // click checkout
-  btnCheckout?.addEventListener("click", () => startCheckout(supabase));
+    // Se loggato: mostra blocco auth (ma se email non confermata, comunque lasciamo anche guest)
+    if (user) {
+      setVisible(checkoutAuthEl, true);
+      if (btnAuth) btnAuth.disabled = !hasItems;
 
-  // se l'utente è tornato dal login e aveva chiesto checkout, riparti automaticamente
-  const post = localStorage.getItem(POST_LOGIN_CHECKOUT_KEY);
-  if (post === "1") {
-    localStorage.removeItem(POST_LOGIN_CHECKOUT_KEY);
-    // avvio automatico checkout (solo se il bottone non è disabilitato)
-    if (!btnCheckout?.disabled) startCheckout(supabase);
+      // Guest sempre disponibile (utile come fallback)
+      setVisible(checkoutGuestEl, true);
+    } else {
+      setVisible(checkoutAuthEl, false);
+      setVisible(checkoutGuestEl, true);
+    }
+
+    // Guest button abilitato solo se email valida + carrello non vuoto
+    const guestOk = isValidEmail(guestEmailInput?.value || "");
+    if (btnGuest) btnGuest.disabled = !(hasItems && guestOk);
+
+    if (guestHint) {
+      if (!hasItems) guestHint.textContent = "";
+      else guestHint.textContent = guestOk ? "Riceverai la conferma a questa email." : "Inserisci un’email valida per procedere.";
+    }
   }
+
+  renderCart();
+
+  // guest email input binding
+  guestEmailInput?.addEventListener("input", updateCheckoutButtons);
+  updateCheckoutButtons();
+
+  function buildItemsPayload() {
+    return cart.map(i => ({ productId: i.productId, qty: i.qty }));
+  }
+
+  async function goCheckoutAsGuest(email) {
+    const payload = { items: buildItemsPayload(), guest_email: String(email || "").trim() };
+    const { res, json } = await fetchJson("/api/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok || !json.ok || !json.url) {
+      console.error(json);
+      throw new Error(json?.error || `Errore checkout (HTTP ${res.status})`);
+    }
+    location.href = json.url;
+  }
+
+  async function goCheckoutAsAuth() {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    const token = s?.access_token;
+
+    if (!token) {
+      // se per qualche motivo perde sessione, fallback guest
+      throw new Error("Sessione scaduta. Procedi come ospite o effettua di nuovo l’accesso.");
+    }
+
+    const payload = { items: buildItemsPayload() };
+
+    const { res, json } = await fetchJson("/api/create-checkout-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Se backend blocca per email non confermata (o altro), fallback guest
+    if (res.status === 403) {
+      const email = guestEmailInput?.value || "";
+      const canGuest = isValidEmail(email);
+      if (!canGuest) {
+        throw new Error(json?.error || "Accesso non consentito. Inserisci un’email valida per procedere come ospite.");
+      }
+      await goCheckoutAsGuest(email);
+      return;
+    }
+
+    if (!res.ok || !json.ok || !json.url) {
+      console.error(json);
+      throw new Error(json?.error || `Errore checkout (HTTP ${res.status})`);
+    }
+
+    location.href = json.url;
+  }
+
+  // click handlers
+  btnGuest?.addEventListener("click", async () => {
+    try {
+      btnGuest.disabled = true;
+      if (btnAuth) btnAuth.disabled = true;
+
+      setText(statusEl, "Creazione checkout in corso...");
+
+      const email = guestEmailInput?.value || "";
+      if (!isValidEmail(email)) {
+        setText(statusEl, "Inserisci un’email valida.", true);
+        updateCheckoutButtons();
+        return;
+      }
+
+      await goCheckoutAsGuest(email);
+    } catch (e) {
+      console.error(e);
+      setText(statusEl, e?.message || "Errore di rete durante il checkout.", true);
+      updateCheckoutButtons();
+    }
+  });
+
+  btnAuth?.addEventListener("click", async () => {
+    try {
+      btnAuth.disabled = true;
+      if (btnGuest) btnGuest.disabled = true;
+
+      setText(statusEl, "Creazione checkout in corso...");
+
+      // se email non confermata, suggeriamo ma non blocchiamo (lasciamo che sia il backend a decidere)
+      if (user && !isEmailConfirmed) {
+        // Se vuoi bloccare client-side, puoi farlo; io preferisco non bloccare e gestire fallback.
+      }
+
+      await goCheckoutAsAuth();
+    } catch (e) {
+      console.error(e);
+      setText(statusEl, e?.message || "Errore di rete durante il checkout.", true);
+      updateCheckoutButtons();
+    }
+  });
 })();

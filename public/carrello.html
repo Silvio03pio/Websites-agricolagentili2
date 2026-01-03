@@ -13,16 +13,59 @@
   <main class="container">
     <h1>Carrello</h1>
 
-    <div id="cart-status" style="opacity:.85;"></div>
+    <div id="cart-status" style="opacity:.85; margin-top:6px;"></div>
+
+    <!-- Stato autenticazione (UX) -->
+    <section id="auth-panel" style="margin-top:14px; padding:12px; border:1px solid rgba(0,0,0,.12); border-radius:12px;">
+      <div id="auth-status" style="opacity:.9;">Verifica accesso...</div>
+
+      <div id="auth-actions" style="margin-top:10px; display:none; gap:10px; flex-wrap:wrap;">
+        <a id="auth-login-link" href="/login.html?next=/carrello.html">Accedi / Registrati</a>
+        <span style="opacity:.75;">oppure procedi come ospite</span>
+      </div>
+
+      <div id="auth-logged" style="margin-top:10px; display:none;">
+        <div style="opacity:.85;">Sei loggato come: <strong id="auth-email"></strong></div>
+        <div id="auth-warning" style="margin-top:6px; display:none; color:crimson;"></div>
+      </div>
+    </section>
+
     <section id="cart-items" style="display:flex; flex-direction:column; gap:12px; margin-top:16px;"></section>
 
-    <div style="margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <section style="margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <strong id="cart-total"></strong>
       <a href="/negozio.html">Continua lo shopping</a>
+    </section>
 
-      <!-- Checkout: gestito da /js/carrello.js (redirect a login se non autenticato) -->
-      <button id="btn-checkout" type="button">Vai al checkout</button>
-    </div>
+    <!-- Checkout area -->
+    <section id="checkout-panel" style="margin-top:16px; padding:12px; border:1px solid rgba(0,0,0,.12); border-radius:12px;">
+      <h2 style="margin:0 0 10px;">Checkout</h2>
+
+      <!-- Checkout loggato -->
+      <div id="checkout-auth" style="display:none;">
+        <p style="margin:0 0 10px; opacity:.85;">
+          Procedi con il checkout usando il tuo account.
+        </p>
+        <button id="btn-checkout-auth" type="button" disabled>Vai al pagamento</button>
+      </div>
+
+      <!-- Checkout ospite -->
+      <div id="checkout-guest" style="display:none;">
+        <p style="margin:0 0 10px; opacity:.85;">
+          Inserisci un’email per ricevere conferma ordine e aggiornamenti.
+        </p>
+
+        <label style="display:block; max-width:520px;">
+          Email
+          <input id="guest-email" type="email" autocomplete="email" placeholder="nome@dominio.it" style="width:100%; margin-top:6px;" />
+        </label>
+
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <button id="btn-checkout-guest" type="button" disabled>Vai al pagamento</button>
+          <span id="guest-hint" style="opacity:.75;"></span>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer id="dynamic-footer"></footer>
