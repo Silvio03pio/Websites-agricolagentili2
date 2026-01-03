@@ -5,9 +5,7 @@ import { Resend } from "resend";
 
 // FONDAMENTALE: Stripe signature vuole i bytes raw, non body parsato
 export const config = {
-  api: {
-    bodyParser: false,
-  },
+  api: { bodyParser: false },
 };
 
 function escapeHtml(s = "") {
@@ -31,8 +29,6 @@ function buildBaseUrl(req) {
 }
 
 function normalizeLineItems(session, lineItems) {
-  const cur = (session.currency || "eur").toUpperCase();
-
   return (lineItems?.data || []).map((li) => {
     const stripeProduct = li?.price?.product;
     const supabaseProductId = stripeProduct?.metadata?.product_id || null;
@@ -43,10 +39,22 @@ function normalizeLineItems(session, lineItems) {
       qty: li.quantity || 1,
       unit_amount_cents: li.price?.unit_amount ?? 0,
       currency: (li.currency || session.currency || "eur").toUpperCase(),
-      // utile se vuoi debug
       stripe_product_id: typeof stripeProduct === "object" ? stripeProduct?.id || null : null,
     };
   });
+}
+
+function formatAddressLines(addr) {
+  if (!addr) return "";
+  const parts = [
+    addr.line1,
+    addr.line2,
+    [addr.postal_code, addr.city].filter(Boolean).join(" "),
+    addr.state,
+    addr.country,
+  ].filter(Boolean);
+
+  return parts.join("<br/>");
 }
 
 function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
@@ -54,8 +62,26 @@ function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
   const total = formatMoney(session.amount_total, (session.currency || "eur").toUpperCase());
   const sessionId = session?.id || "-";
 
+  // Indirizzo spedizione (se presente)
+  const shipping = session?.shipping_details || null;
+  const shipName = shipping?.name || null;
+  const shipAddr = shipping?.address || null;
+  const shipHtml = shipAddr
+    ? `
+      <div style="margin-top:12px;">
+        <div style="font-weight:700; margin-bottom:6px;">Spedizione</div>
+        <div style="color:#333;">
+          ${shipName ? `<div><strong>${escapeHtml(shipName)}</strong></div>` : ``}
+          <div>${formatAddressLines(shipAddr)}</div>
+        </div>
+      </div>
+    `
+    : `<div style="margin-top:12px; color:#999; font-size:12px;">Spedizione: (non presente in sessione Stripe)</div>`;
+
   const rows = items.length
-    ? items.map(i => `
+    ? items
+        .map(
+          (i) => `
       <tr>
         <td style="padding:8px 0; border-bottom:1px solid #eee;">
           ${escapeHtml(i.name)}
@@ -66,9 +92,13 @@ function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
           }
         </td>
         <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:center;">${i.qty}</td>
-        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(formatMoney(i.unit_amount_cents, i.currency))}</td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(
+          formatMoney(i.unit_amount_cents, i.currency)
+        )}</td>
       </tr>
-    `).join("")
+    `
+        )
+        .join("")
     : `<tr><td colspan="3" style="padding:10px 0; color:#666;">(Nessuna riga)</td></tr>`;
 
   const totalRow = `
@@ -99,6 +129,8 @@ function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
             <tr><td style="padding:2px 0; color:#666;">Tipo</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(role === "retailer" ? "Rivenditore" : "Cliente")}</strong></td></tr>
             <tr><td style="padding:2px 0; color:#666;">Totale</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(total)}</strong></td></tr>
           </table>
+
+          ${shipHtml}
 
           <div style="margin-top:16px; font-weight:700;">Righe ordine</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px; font-size:14px;">
@@ -133,14 +165,37 @@ function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
 function buildCustomerEmailHtml({ orderId, session, items }) {
   const total = formatMoney(session.amount_total, (session.currency || "eur").toUpperCase());
 
+  // Indirizzo spedizione (se presente) — utile anche per il cliente
+  const shipping = session?.shipping_details || null;
+  const shipName = shipping?.name || null;
+  const shipAddr = shipping?.address || null;
+
+  const shipHtml = shipAddr
+    ? `
+      <div style="margin:14px 0 0;">
+        <div style="font-weight:700; margin-bottom:6px;">Indirizzo di spedizione</div>
+        <div style="color:#333;">
+          ${shipName ? `<div><strong>${escapeHtml(shipName)}</strong></div>` : ``}
+          <div>${formatAddressLines(shipAddr)}</div>
+        </div>
+      </div>
+    `
+    : ``;
+
   const rows = items.length
-    ? items.map(i => `
+    ? items
+        .map(
+          (i) => `
       <tr>
         <td style="padding:8px 0; border-bottom:1px solid #eee;">${escapeHtml(i.name)}</td>
         <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:center;">${i.qty}</td>
-        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(formatMoney(i.unit_amount_cents, i.currency))}</td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(
+          formatMoney(i.unit_amount_cents, i.currency)
+        )}</td>
       </tr>
-    `).join("")
+    `
+        )
+        .join("")
     : `<tr><td colspan="3" style="padding:10px 0; color:#666;">(Nessuna riga)</td></tr>`;
 
   const totalRow = `
@@ -170,6 +225,8 @@ function buildCustomerEmailHtml({ orderId, session, items }) {
             <tr><td style="padding:2px 0; color:#666;">Totale</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(total)}</strong></td></tr>
           </table>
 
+          ${shipHtml}
+
           <div style="margin-top:16px; font-weight:700;">Riepilogo prodotti</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px; font-size:14px;">
             <thead>
@@ -198,7 +255,6 @@ function buildCustomerEmailHtml({ orderId, session, items }) {
   </div>`;
 }
 
-
 async function safeSendEmail(resend, payload) {
   // Non deve MAI rompere il webhook
   try {
@@ -214,6 +270,12 @@ async function safeSendEmail(resend, payload) {
   }
 }
 
+function isUnknownColumnError(err) {
+  const msg = String(err?.message || err || "").toLowerCase();
+  // PostgREST tipicamente: "Could not find the 'x' column of 'orders' in the schema cache"
+  return msg.includes("could not find") && msg.includes("column") && msg.includes("schema cache");
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -221,7 +283,6 @@ export default async function handler(req, res) {
     return res.status(405).send("Method not allowed");
   }
 
-  // ENV essenziali (ordine)
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -270,11 +331,7 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (existingEventErr) {
-      return res.status(500).json({
-        ok: false,
-        error: "stripe_events query failed",
-        details: existingEventErr.message,
-      });
+      return res.status(500).json({ ok: false, error: "stripe_events query failed", details: existingEventErr.message });
     }
 
     if (existingEvent?.id) {
@@ -308,14 +365,31 @@ export default async function handler(req, res) {
         expand: ["data.price.product"],
       });
 
-      const customerEmail = session.customer_details?.email || session.customer_email || null;
+      // Email cliente: preferisco Stripe, ma ho fallback su Supabase Auth
+      let customerEmail = session.customer_details?.email || session.customer_email || null;
+      try {
+        if (!customerEmail) {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(userId);
+          customerEmail = u?.user?.email || null;
+        }
+      } catch (e) {
+        console.warn("[EMAIL FALLBACK] Cannot read user email from auth.admin.getUserById:", e?.message || e);
+      }
+
       const amountTotal = session.amount_total || 0;
       const currency = (session.currency || "eur").toUpperCase();
-
       const status = paymentStatus === "paid" ? "paid" : "created";
 
-      // Dati ordine
-      const orderPayload = {
+      // --- Nuovo: dati spedizione/fatturazione/telefono ---
+      const shipping = session.shipping_details || null;
+      const shipAddr = shipping?.address || null;
+
+      const customerDetails = session.customer_details || null;
+      const billAddr = customerDetails?.address || null;
+      const phone = customerDetails?.phone || null;
+
+      // Dati base ordine (sempre sicuri)
+      const baseOrderPayload = {
         user_id: userId,
         role,
         customer_email: customerEmail,
@@ -328,19 +402,41 @@ export default async function handler(req, res) {
         updated_at: new Date().toISOString(),
       };
 
+      // Dati estesi (richiedono colonne in DB; se mancano facciamo fallback senza rompere)
+      const extendedOrderPayload = {
+        ...baseOrderPayload,
+
+        // SPEDIZIONE
+        shipping_name: shipping?.name || null,
+        shipping_phone: phone || null,
+        shipping_line1: shipAddr?.line1 || null,
+        shipping_line2: shipAddr?.line2 || null,
+        shipping_city: shipAddr?.city || null,
+        shipping_state: shipAddr?.state || null,
+        shipping_postal_code: shipAddr?.postal_code || null,
+        shipping_country: shipAddr?.country || null,
+
+        // FATTURAZIONE
+        billing_line1: billAddr?.line1 || null,
+        billing_line2: billAddr?.line2 || null,
+        billing_city: billAddr?.city || null,
+        billing_state: billAddr?.state || null,
+        billing_postal_code: billAddr?.postal_code || null,
+        billing_country: billAddr?.country || null,
+
+        // SNAPSHOT (richiede colonne jsonb se le vuoi)
+        stripe_customer_details: customerDetails,
+        stripe_shipping_details: shipping,
+      };
+
       // 4) Insert o update by stripe_session_id
       let orderId = null;
 
-      const { data: inserted, error: insErr } = await supabaseAdmin
-        .from("orders")
-        .insert(orderPayload)
-        .select("id")
-        .maybeSingle();
+      async function insertOrder(payload) {
+        return await supabaseAdmin.from("orders").insert(payload).select("id").maybeSingle();
+      }
 
-      if (!insErr) {
-        orderId = inserted?.id;
-      } else {
-        // Probabilmente unique constraint su stripe_session_id → update
+      async function updateOrderBySession(payload) {
         const { data: existingOrder, error: selErr } = await supabaseAdmin
           .from("orders")
           .select("id")
@@ -348,11 +444,47 @@ export default async function handler(req, res) {
           .single();
 
         if (selErr) throw selErr;
-
         orderId = existingOrder.id;
 
-        const { error: updErr } = await supabaseAdmin.from("orders").update(orderPayload).eq("id", orderId);
+        const { error: updErr } = await supabaseAdmin.from("orders").update(payload).eq("id", orderId);
         if (updErr) throw updErr;
+
+        return { data: { id: orderId }, error: null };
+      }
+
+      // Prova con payload esteso, se fallisce per colonne mancanti riprova con base
+      let insRes = await insertOrder(extendedOrderPayload);
+      if (insRes.error) {
+        if (isUnknownColumnError(insRes.error)) {
+          console.warn("[ORDERS] Missing columns for extended payload. Falling back to base payload.");
+          insRes = await insertOrder(baseOrderPayload);
+        } else {
+          // potrebbe essere unique constraint -> update
+          try {
+            const updPayload = extendedOrderPayload;
+            const updRes = await updateOrderBySession(updPayload);
+            orderId = updRes?.data?.id || orderId;
+          } catch (e) {
+            // se update esteso fallisce per colonne mancanti, riprova base
+            const msg = String(e?.message || e);
+            if (isUnknownColumnError(e)) {
+              console.warn("[ORDERS] Update missing columns. Falling back to base payload.");
+              const updRes = await updateOrderBySession(baseOrderPayload);
+              orderId = updRes?.data?.id || orderId;
+            } else {
+              throw new Error(msg);
+            }
+          }
+        }
+      }
+
+      if (!orderId) {
+        if (!insRes.error) orderId = insRes?.data?.id || null;
+        if (!orderId && insRes.error) {
+          // in caso di insert base fallito, prova update base
+          const updRes = await updateOrderBySession(baseOrderPayload);
+          orderId = updRes?.data?.id || null;
+        }
       }
 
       // 5) Inserisci items solo se non presenti
@@ -366,7 +498,7 @@ export default async function handler(req, res) {
 
       if (!existingItems || existingItems.length === 0) {
         const itemsToInsert = (lineItems.data || []).map((li) => {
-          const stripeProduct = li?.price?.product; // oggetto grazie all'expand
+          const stripeProduct = li?.price?.product;
           const supabaseProductId = stripeProduct?.metadata?.product_id || null;
 
           return {
@@ -384,25 +516,17 @@ export default async function handler(req, res) {
       }
 
       // 6) Email notifica ordine (solo se paid)
-      //    Non deve mai far fallire il webhook.
       if (paymentStatus === "paid") {
         const resendKey = process.env.RESEND_API_KEY;
         const from = process.env.ORDER_FROM_EMAIL || process.env.CONTACT_FROM_EMAIL || null;
         const toTeam = process.env.ORDER_TO_EMAIL || process.env.CONTACT_TO_EMAIL || null;
 
-        // Se manca config email, non bloccare
         if (resendKey && from && toTeam) {
           const resend = new Resend(resendKey);
           const baseUrl = buildBaseUrl(req);
-
-          // items normalizzati per email
           const items = normalizeLineItems(session, lineItems);
 
-          // (Best practice) evita doppio invio email anche in casi non previsti:
-          // Se hai queste colonne in orders: team_email_sent_at, customer_email_sent_at
-          // Se NON le hai, questo blocco di update fallirà: lo gestiamo in try/catch e proseguiamo.
           let orderFlags = { teamSentAt: null, customerSentAt: null };
-
           try {
             const { data: o } = await supabaseAdmin
               .from("orders")
@@ -413,56 +537,37 @@ export default async function handler(req, res) {
             orderFlags.teamSentAt = o?.team_email_sent_at || null;
             orderFlags.customerSentAt = o?.customer_email_sent_at || null;
           } catch {
-            // colonne non presenti → ignoriamo (idempotenza resta via stripe_events)
+            // colonne non presenti → ignoriamo
           }
 
-          // 6.1 Email al team
+          // Team
           if (!orderFlags.teamSentAt) {
-            const subject = `Nuovo ordine pagato — ${formatMoney(amountTotal, currency)} — ${role === "retailer" ? "Rivenditore" : "Cliente"}`;
+            const subject = `Nuovo ordine pagato — ${formatMoney(amountTotal, currency)} — ${
+              role === "retailer" ? "Rivenditore" : "Cliente"
+            }`;
+
             const html = buildTeamEmailHtml({ orderId, session, role, items, baseUrl });
 
-            const teamSend = await safeSendEmail(resend, {
-              from,
-              to: [toTeam],
-              subject,
-              html,
-            });
+            const teamSend = await safeSendEmail(resend, { from, to: [toTeam], subject, html });
 
             if (teamSend.ok) {
               try {
-                await supabaseAdmin
-                  .from("orders")
-                  .update({ team_email_sent_at: new Date().toISOString() })
-                  .eq("id", orderId);
-              } catch {
-                // colonne non presenti → ignora
-              }
+                await supabaseAdmin.from("orders").update({ team_email_sent_at: new Date().toISOString() }).eq("id", orderId);
+              } catch {}
             }
           }
 
-          // 6.2 Email al cliente (opzionale, attiva se customerEmail presente)
+          // Cliente
           if (customerEmail && !orderFlags.customerSentAt) {
             const subject = "Conferma ordine — Agricola Gentili";
             const html = buildCustomerEmailHtml({ orderId, session, items });
 
-            const customerSend = await safeSendEmail(resend, {
-              from,
-              to: [customerEmail],
-              subject,
-              html,
-              // puoi impostare replyTo a un supporto fisso se vuoi:
-              // replyTo: "info@agricolagentiliorvieto.com",
-            });
+            const customerSend = await safeSendEmail(resend, { from, to: [customerEmail], subject, html });
 
             if (customerSend.ok) {
               try {
-                await supabaseAdmin
-                  .from("orders")
-                  .update({ customer_email_sent_at: new Date().toISOString() })
-                  .eq("id", orderId);
-              } catch {
-                // colonne non presenti → ignora
-              }
+                await supabaseAdmin.from("orders").update({ customer_email_sent_at: new Date().toISOString() }).eq("id", orderId);
+              } catch {}
             }
           }
         } else {
