@@ -49,7 +49,9 @@ export default async function handler(req, res) {
     if (userErr || !userData?.user) {
       return res.status(401).json({ ok: false, error: "Invalid session", details: userErr?.message || null });
     }
-    const userId = userData.user.id;
+    const user = userData.user;
+    const userId = user.id;
+    const userEmail = user.email || null;
 
     // ruolo
     const { data: profile, error: profErr } = await supabaseAdmin
@@ -77,7 +79,7 @@ export default async function handler(req, res) {
 
     const ids = [...new Set(normalized.map(i => i.productId))];
 
-    // carica prodotti
+    // carica prodotti (fonte di verità)
     const { data: products, error: prodErr } = await supabaseAdmin
       .from("products")
       .select("id, name, price_cents, currency, active")
@@ -103,6 +105,7 @@ export default async function handler(req, res) {
           unit_amount: unit,
           product_data: {
             name: p.name,
+            // IMPORTANT: qui mettiamo il tuo UUID Supabase così il webhook può ricostruire order_items correttamente
             metadata: { product_id: p.id }
           }
         }
@@ -120,19 +123,26 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
-      success_url: `${baseUrl}/success.html`,
+      // fondamentale per post-payment verification
+      success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cancel.html`,
+
+      // tracciabilità
+      client_reference_id: userId,
+
+      // Stripe user email
+      ...(userEmail ? { customer_email: userEmail } : {}),
+
+      // metadata su sessione (utile nel webhook)
       metadata: { user_id: userId, role }
     });
 
     return res.status(200).json({ ok: true, url: session.url });
   } catch (e) {
-    // Errore runtime/Stripe
     return res.status(500).json({
       ok: false,
       error: "Server error",
       details: String(e?.message || e),
-      // Stripe spesso espone "type" utile
       type: e?.type || null,
     });
   }
