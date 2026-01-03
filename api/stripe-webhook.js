@@ -52,59 +52,152 @@ function normalizeLineItems(session, lineItems) {
 function buildTeamEmailHtml({ orderId, session, role, items, baseUrl }) {
   const customerEmail = session?.customer_details?.email || session?.customer_email || "-";
   const total = formatMoney(session.amount_total, (session.currency || "eur").toUpperCase());
+  const sessionId = session?.id || "-";
 
-  const itemsHtml = items.length
-    ? `<ul>${items
-        .map(
-          (i) =>
-            `<li>${i.qty} × ${escapeHtml(i.name)} — ${formatMoney(
-              i.unit_amount_cents,
-              i.currency
-            )}${i.product_id ? ` <span style="opacity:.7;">(product_id: ${escapeHtml(i.product_id)})</span>` : ""}</li>`
-        )
-        .join("")}</ul>`
-    : "<p>(Nessuna riga)</p>";
+  const rows = items.length
+    ? items.map(i => `
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #eee;">
+          ${escapeHtml(i.name)}
+          ${
+            i.product_id
+              ? `<div style="color:#999; font-size:12px; margin-top:2px;">ID prodotto: ${escapeHtml(i.product_id)}</div>`
+              : ``
+          }
+        </td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:center;">${i.qty}</td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(formatMoney(i.unit_amount_cents, i.currency))}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="3" style="padding:10px 0; color:#666;">(Nessuna riga)</td></tr>`;
 
-  const successUrl = `${baseUrl}/success.html?session_id=${encodeURIComponent(session.id)}`;
+  const totalRow = `
+    <tr>
+      <td style="padding:10px 0; text-align:right; border-top:2px solid #eee;" colspan="2"><strong>Totale</strong></td>
+      <td style="padding:10px 0; text-align:right; border-top:2px solid #eee;"><strong>${escapeHtml(total)}</strong></td>
+    </tr>
+  `;
+
+  const successUrl = `${baseUrl}/success.html?session_id=${encodeURIComponent(sessionId)}`;
 
   return `
-    <h2>Nuovo ordine pagato</h2>
-    <p><strong>Order ID (Supabase):</strong> ${escapeHtml(orderId)}</p>
-    <p><strong>Stripe session:</strong> ${escapeHtml(session.id)}</p>
-    <p><strong>Cliente:</strong> ${escapeHtml(customerEmail)}</p>
-    <p><strong>Ruolo:</strong> ${escapeHtml(role)}</p>
-    <p><strong>Totale:</strong> ${escapeHtml(total)}</p>
-    <hr/>
-    <h3>Righe ordine</h3>
-    ${itemsHtml}
-    <hr/>
-    <p><a href="${successUrl}">Apri pagina success (debug)</a></p>
-  `;
+  <div style="font-family:Arial,Helvetica,sans-serif; background:#f6f6f6; padding:24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #eee; border-radius:12px;">
+      <tr>
+        <td style="padding:18px 22px; border-bottom:1px solid #eee;">
+          <div style="font-size:18px; font-weight:700;">Nuovo ordine pagato</div>
+          <div style="color:#666; margin-top:4px;">Agricola Gentili</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:18px 22px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+            <tr><td style="padding:2px 0; color:#666;">Order ID (Supabase)</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(orderId)}</strong></td></tr>
+            <tr><td style="padding:2px 0; color:#666;">Stripe session</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(sessionId)}</strong></td></tr>
+            <tr><td style="padding:2px 0; color:#666;">Cliente</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(customerEmail)}</strong></td></tr>
+            <tr><td style="padding:2px 0; color:#666;">Tipo</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(role === "retailer" ? "Rivenditore" : "Cliente")}</strong></td></tr>
+            <tr><td style="padding:2px 0; color:#666;">Totale</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(total)}</strong></td></tr>
+          </table>
+
+          <div style="margin-top:16px; font-weight:700;">Righe ordine</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px; font-size:14px;">
+            <thead>
+              <tr>
+                <th align="left" style="padding:8px 0; border-bottom:2px solid #eee;">Prodotto</th>
+                <th align="center" style="padding:8px 0; border-bottom:2px solid #eee;">Qtà</th>
+                <th align="right" style="padding:8px 0; border-bottom:2px solid #eee;">Prezzo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              ${totalRow}
+            </tbody>
+          </table>
+
+          <div style="margin-top:18px;">
+            <a href="${successUrl}" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 14px; border-radius:10px; font-size:14px;">
+              Apri pagina ordine (debug)
+            </a>
+          </div>
+
+          <div style="margin-top:14px; color:#999; font-size:12px;">
+            Email automatica dal sistema ordini (Stripe webhook).
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>`;
 }
 
 function buildCustomerEmailHtml({ orderId, session, items }) {
   const total = formatMoney(session.amount_total, (session.currency || "eur").toUpperCase());
 
-  const itemsHtml = items.length
-    ? `<ul>${items
-        .map(
-          (i) =>
-            `<li>${i.qty} × ${escapeHtml(i.name)} — ${formatMoney(i.unit_amount_cents, i.currency)}</li>`
-        )
-        .join("")}</ul>`
-    : "<p>(Nessuna riga)</p>";
+  const rows = items.length
+    ? items.map(i => `
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #eee;">${escapeHtml(i.name)}</td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:center;">${i.qty}</td>
+        <td style="padding:8px 0; border-bottom:1px solid #eee; text-align:right;">${escapeHtml(formatMoney(i.unit_amount_cents, i.currency))}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="3" style="padding:10px 0; color:#666;">(Nessuna riga)</td></tr>`;
+
+  const totalRow = `
+    <tr>
+      <td style="padding:10px 0; text-align:right; border-top:2px solid #eee;" colspan="2"><strong>Totale</strong></td>
+      <td style="padding:10px 0; text-align:right; border-top:2px solid #eee;"><strong>${escapeHtml(total)}</strong></td>
+    </tr>
+  `;
 
   return `
-    <h2>Grazie per il tuo ordine!</h2>
-    <p>Abbiamo ricevuto correttamente il pagamento.</p>
-    <p><strong>Riferimento ordine:</strong> ${escapeHtml(orderId)}</p>
-    <p><strong>Totale:</strong> ${escapeHtml(total)}</p>
-    <hr/>
-    <h3>Riepilogo</h3>
-    ${itemsHtml}
-    <p style="margin-top:16px;">Per assistenza, rispondi a questa email.</p>
-  `;
+  <div style="font-family:Arial,Helvetica,sans-serif; background:#f6f6f6; padding:24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #eee; border-radius:12px;">
+      <tr>
+        <td style="padding:18px 22px; border-bottom:1px solid #eee;">
+          <div style="font-size:18px; font-weight:700;">Conferma ordine</div>
+          <div style="color:#666; margin-top:4px;">Agricola Gentili</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:18px 22px; font-size:14px;">
+          <p style="margin:0 0 10px;">Ciao,</p>
+          <p style="margin:0 0 10px;">grazie per il tuo acquisto. Abbiamo ricevuto correttamente il pagamento.</p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0; font-size:14px;">
+            <tr><td style="padding:2px 0; color:#666;">Riferimento ordine</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(orderId)}</strong></td></tr>
+            <tr><td style="padding:2px 0; color:#666;">Totale</td><td style="padding:2px 0; text-align:right;"><strong>${escapeHtml(total)}</strong></td></tr>
+          </table>
+
+          <div style="margin-top:16px; font-weight:700;">Riepilogo prodotti</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px; font-size:14px;">
+            <thead>
+              <tr>
+                <th align="left" style="padding:8px 0; border-bottom:2px solid #eee;">Prodotto</th>
+                <th align="center" style="padding:8px 0; border-bottom:2px solid #eee;">Qtà</th>
+                <th align="right" style="padding:8px 0; border-bottom:2px solid #eee;">Prezzo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              ${totalRow}
+            </tbody>
+          </table>
+
+          <p style="margin:16px 0 0; color:#666;">
+            Per assistenza, rispondi a questa email.
+          </p>
+
+          <p style="margin:18px 0 0; color:#999; font-size:12px;">
+            Questa è un’email automatica di conferma ordine.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </div>`;
 }
+
 
 async function safeSendEmail(resend, payload) {
   // Non deve MAI rompere il webhook
