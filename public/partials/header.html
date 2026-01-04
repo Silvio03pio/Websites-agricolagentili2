@@ -1,12 +1,99 @@
-<div class="container">
-  <nav class="nav">
-    <a href="/index.html">Home</a>
-    <a href="/storia.html">Storia</a>
-    <a href="/vini.html">Vini</a>
-    <a href="/olio.html">Olio</a>
-    <a href="/negozio.html">Negozio</a>
-    <a href="/carrello.html">Carrello</a>
-    <!-- <a href="/area-rivenditori.html">Area Rivenditori</a> -->
-    <a href="/contatti.html">Contatti</a>
-  </nav>
-</div>
+<!-- partials/header.html -->
+<header class="site-header" role="banner">
+  <div class="site-header__inner">
+
+    <!-- MENU (alto sinistra) -->
+    <details class="menu" aria-label="Menu principale">
+      <summary class="icon-btn menu__summary" aria-label="Apri/Chiudi menu">
+        <!-- Hamburger (chiuso) -->
+        <svg class="icon icon--hamb" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+
+        <!-- X (aperto) -->
+        <svg class="icon icon--close" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </summary>
+
+      <!-- OVERLAY FULLSCREEN -->
+      <div class="menu__panel" role="dialog" aria-modal="true">
+        <div class="menu__inner">
+
+          <!-- TOP: logo centro + lingue destra -->
+          <div class="menu__top">
+            <a class="menu__brand" href="/index.html" aria-label="Agricola Gentili - Home">
+              <img class="menu__brand-logo" src="/images/Logo_nero_trasparente.png" alt="Agricola Gentili">
+            </a>
+
+            <nav class="menu__langs" aria-label="Lingue">
+              <a class="menu__lang is-active" href="/?lang=it" lang="it">ITA</a>
+              <a class="menu__lang" href="/?lang=en" lang="en">ENG</a>
+              <a class="menu__lang" href="/?lang=de" lang="de">DEU</a>
+            </nav>
+          </div>
+
+          <!-- 4 COLONNE -->
+          <div class="menu__grid" aria-label="Sezioni">
+
+            <section class="menu-col" aria-label="Storia">
+              <h3 class="menu-col__title">STORIA</h3>
+              <a class="menu-col__link" href="/storia.html">La nostra storia</a>
+              <a class="menu-col__link" href="/storia.html#territorio">Territorio</a>
+              <a class="menu-col__link" href="/contatti.html">Contatti</a>
+            </section>
+
+            <section class="menu-col" aria-label="Olio">
+              <h3 class="menu-col__title">OLIO</h3>
+              <a class="menu-col__link" href="/olio.html">Olio EVO</a>
+              <a class="menu-col__link" href="/olio.html#produzione">Produzione</a>
+              <a class="menu-col__link" href="/negozio.html?cat=olio">Acquista Olio</a>
+            </section>
+
+            <section class="menu-col" aria-label="Vino">
+              <h3 class="menu-col__title">VINO</h3>
+              <a class="menu-col__link" href="/vini.html">I nostri vini</a>
+              <a class="menu-col__link" href="/vini.html#cantina">Cantina</a>
+              <a class="menu-col__link" href="/negozio.html?cat=vino">Acquista Vino</a>
+            </section>
+
+            <section class="menu-col" aria-label="Negozio">
+              <h3 class="menu-col__title">NEGOZIO</h3>
+              <a class="menu-col__link" href="/negozio.html">Vai al Negozio</a>
+              <a class="menu-col__link" href="/carrello.html">Carrello</a>
+              <a class="menu-col__link" href="/area-rivenditori.html">Area Rivenditori</a>
+            </section>
+
+          </div>
+
+          <!-- FOOTER MENU: social + contatti -->
+          <div class="menu__bottom">
+            <div class="menu__social" aria-label="Social">
+              <a class="menu__social-link" href="#" aria-label="Instagram">Instagram</a>
+              <a class="menu__social-link" href="#" aria-label="Facebook">Facebook</a>
+              <a class="menu__social-link" href="#" aria-label="YouTube">YouTube</a>
+            </div>
+
+            <a class="menu__contacts" href="/contatti.html">CONTATTI</a>
+          </div>
+
+        </div>
+      </div>
+    </details>
+
+    <!-- DESTRA: carrello + logo -->
+    <div class="site-header__right">
+      <a class="icon-btn" href="/carrello.html" aria-label="Apri carrello">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 9V7a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M6.5 9h11l1 12.5H5.5L6.5 9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </a>
+
+      <a class="brand" href="/index.html" aria-label="Agricola Gentili - Home">
+        <img class="brand__logo" src="/images/Logo_nero_trasparente.png" alt="Agricola Gentili">
+      </a>
+    </div>
+
+  </div>
+</header>

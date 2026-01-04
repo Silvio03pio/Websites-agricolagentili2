@@ -38,7 +38,7 @@
   align-items:center;
 }
 .brand__logo{
-  height: 34px;
+  height: 50px;
   width: auto;
 }
 
@@ -65,48 +65,216 @@
   color: rgba(31,35,40,.86);
 }
 
-/* Menu dropdown (alto sinistra) */
+/* =========================
+   MEGA MENU OVERLAY
+========================= */
+
 .menu{
   position: relative;
 }
+
+/* Il summary diventa il tasto in alto a sinistra */
 .menu > summary{
   list-style: none;
   cursor: pointer;
 }
 .menu > summary::-webkit-details-marker{ display:none; }
 
+/* Icon toggle: hamburger vs close */
+.icon--close{ display:none; }
+.menu[open] .icon--hamb{ display:none; }
+.menu[open] .icon--close{ display:block; }
+
+/* Overlay full-screen */
 .menu__panel{
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  background: #070708;
+  color: rgba(255,255,255,.92);
+}
+
+/* Watermark ornamentale (opzionale) */
+.menu__panel::before{
+  content:"";
   position:absolute;
-  left: 0;
-  top: calc(100% + 10px);
-  min-width: 220px;
-
-  background: rgba(255,255,255,.88);
-  border: 1px solid rgba(31,35,40,.12);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 10px;
+  inset:0;
+  background-image: url("/images/Logo_nero_trasparente.png");
+  background-repeat: no-repeat;
+  background-position: center 38%;
+  background-size: min(1100px, 92vw);
+  opacity: .06;
+  filter: invert(1);
+  pointer-events: none;
 }
 
-.menu__nav{
-  display:flex;
-  flex-direction:column;
-  gap: 6px;
-}
-.menu__link{
-  display:block;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  color: rgba(31,35,40,.92);
-  text-decoration:none;
-}
-.menu__link:hover{
-  background: rgba(122,31,43,.08);
-  text-decoration:none;
+/* Velo per profondità */
+.menu__panel::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.08), rgba(0,0,0,.88) 70%);
+  pointer-events:none;
 }
 
-/* Mobile tweaks */
-@media (max-width: 480px){
-  .brand__logo{ height: 30px; }
-  .site-header__inner{ padding: 12px var(--pad); }
+.menu__inner{
+  position: relative;
+  z-index: 1;
+
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px var(--pad) 22px;
+
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
 }
+
+/* Posizionamento del tasto X: lo summary deve restare cliccabile sopra overlay */
+.menu[open] > summary{
+  position: fixed;
+  top: 14px;
+  left: var(--pad);
+  z-index: 120;
+  border-color: rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+}
+.menu[open] > summary .icon{
+  color: rgba(255,255,255,.92);
+}
+
+/* Top: logo centro + lingue destra */
+.menu__top{
+  position: relative;
+  padding-top: 10px;
+  padding-bottom: 18px;
+}
+
+.menu__brand{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+}
+.menu__brand-logo{
+  height: 54px;
+  width: auto;
+  filter: invert(1);
+  opacity: .95;
+}
+
+.menu__langs{
+  position: absolute;
+  top: 8px;
+  right: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: right;
+}
+.menu__lang{
+  font-size: 12px;
+  letter-spacing: .14em;
+  font-weight: 700;
+  color: rgba(255,255,255,.78);
+  text-decoration: none;
+}
+.menu__lang:hover{ color: rgba(255,255,255,.95); text-decoration:none; }
+.menu__lang.is-active{ color: rgba(255,255,255,.98); }
+
+/* Griglia 4 colonne */
+.menu__grid{
+  align-self: center;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(18px, 3vw, 44px);
+
+  padding: 18px 0 12px;
+}
+
+/* Separatore verticale tra colonne (stile reference) */
+.menu-col{
+  padding: 8px 18px;
+  border-right: 1px solid rgba(255,255,255,.10);
+}
+.menu-col:last-child{ border-right: 0; }
+
+.menu-col__title{
+  margin: 0 0 18px;
+  font-size: 14px;
+  letter-spacing: .22em;
+  font-weight: 800;
+  color: rgba(255,255,255,.92);
+}
+
+.menu-col__link{
+  display: block;
+  padding: 8px 0;
+  font-size: 16px;
+  color: rgba(255,255,255,.62);
+  text-decoration: none;
+}
+.menu-col__link:hover{
+  color: rgba(255,255,255,.95);
+  text-decoration: none;
+}
+
+/* Bottom: social + contatti */
+.menu__bottom{
+  border-top: 1px solid rgba(255,255,255,.10);
+  padding-top: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.menu__social{
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.menu__social-link{
+  font-size: 12px;
+  letter-spacing: .10em;
+  color: rgba(255,255,255,.62);
+  text-decoration: none;
+}
+.menu__social-link:hover{
+  color: rgba(255,255,255,.95);
+  text-decoration: none;
+}
+
+.menu__contacts{
+  font-size: 12px;
+  letter-spacing: .22em;
+  font-weight: 800;
+  color: rgba(255,255,255,.88);
+  text-decoration: none;
+}
+.menu__contacts:hover{
+  color: rgba(255,255,255,.98);
+  text-decoration: none;
+}
+
+/* Responsive: da 4 colonne a 2, poi a 1 */
+@media (max-width: 980px){
+  .menu__grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .menu-col:nth-child(2){ border-right: 0; }
+}
+@media (max-width: 560px){
+  .menu__brand-logo{ height: 44px; }
+  .menu__grid{ grid-template-columns: 1fr; }
+  .menu-col{ border-right: 0; border-bottom: 1px solid rgba(255,255,255,.10); padding: 14px 0; }
+  .menu-col:last-child{ border-bottom: 0; }
+}
+
+/* (Opzionale) blocco scroll quando menu è aperto (supporto browser moderni) */
+html:has(.menu[open]){
+  overflow: hidden;
+}
+
