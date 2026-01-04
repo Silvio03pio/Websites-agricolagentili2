@@ -1,0 +1,112 @@
+/* Header overlay (alto) */
+.site-header{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+
+  /* Leggibilità sopra video */
+  background: linear-gradient(
+    to bottom,
+    rgba(251,250,247,.82),
+    rgba(251,250,247,.35),
+    rgba(251,250,247,0)
+  );
+}
+
+.site-header__inner{
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 14px var(--pad);
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
+}
+
+.site-header__right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+/* Brand logo (alto destra) */
+.brand{
+  display:inline-flex;
+  align-items:center;
+}
+.brand__logo{
+  height: 34px;
+  width: auto;
+}
+
+/* Icon button (carrello + menu) */
+.icon-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(31,35,40,.12);
+  background: rgba(255,255,255,.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.icon-btn:hover{
+  background: rgba(255,255,255,.75);
+  text-decoration:none;
+}
+.icon{
+  width: 20px;
+  height: 20px;
+  color: rgba(31,35,40,.86);
+}
+
+/* Menu dropdown (alto sinistra) */
+.menu{
+  position: relative;
+}
+.menu > summary{
+  list-style: none;
+  cursor: pointer;
+}
+.menu > summary::-webkit-details-marker{ display:none; }
+
+.menu__panel{
+  position:absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  min-width: 220px;
+
+  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(31,35,40,.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 10px;
+}
+
+.menu__nav{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+.menu__link{
+  display:block;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: rgba(31,35,40,.92);
+  text-decoration:none;
+}
+.menu__link:hover{
+  background: rgba(122,31,43,.08);
+  text-decoration:none;
+}
+
+/* Mobile tweaks */
+@media (max-width: 480px){
+  .brand__logo{ height: 30px; }
+  .site-header__inner{ padding: 12px var(--pad); }
+}
