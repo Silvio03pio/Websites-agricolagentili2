@@ -21,8 +21,7 @@
       </div>
 
       <div style="display:flex; gap:8px; margin:12px 0;">
-        <button id="btn-google" type="button">Continua con Google</button>
-        <button id="btn-apple" type="button">Continua con Apple</button>
+        
       </div>
 
       <div id="msg" style="margin:12px 0;"></div>
@@ -40,6 +39,25 @@
         <label>Telefono<br><input id="signup-phone" type="text"></label><br><br>
         <label>Email<br><input id="signup-email" type="email" required></label><br><br>
         <label>Password<br><input id="signup-password" type="password" required></label><br><br>
+        <label style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+        <input id="is-retailer" type="checkbox">
+        <span>Mi registro come Rivenditore (B2B)</span>
+        </label>
+
+        <div id="retailer-fields" style="display:none; margin-top:12px;">
+        <label>Ragione sociale<br>
+            <input id="company_name" type="text" autocomplete="organization">
+        </label><br><br>
+
+        <label>Partita IVA / VAT (8–14 caratteri)<br>
+            <input id="vat_number" type="text" autocomplete="off" inputmode="text" placeholder="Es. IT12345678901">
+        </label><br><br>
+
+        <label>Telefono<br>
+            <input id="phone" type="tel" autocomplete="tel">
+        </label>
+        </div>
+
         <button type="submit">Crea account</button>
       </form>
     </div>

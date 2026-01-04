@@ -1,10 +1,17 @@
 import { getSupabase } from "/js/supabaseClient.js";
 import { readCart, updateQty, removeItem } from "/js/cart.js";
-import { formatEUR, priceForRole, getCurrentUserRole } from "/js/pricing.js";
+import { formatEUR } from "/js/pricing.js";
 
 function qs(sel) { return document.querySelector(sel); }
 
 const POST_LOGIN_CHECKOUT_KEY = "ag_post_login_checkout_v1";
+
+function setStatus(text, isErr = false) {
+  const el = qs("#cart-status");
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isErr ? "crimson" : "inherit";
+}
 
 function lineItemRow(p, qty, lineTotalCents) {
   const row = document.createElement("div");
@@ -19,7 +26,7 @@ function lineItemRow(p, qty, lineTotalCents) {
   row.innerHTML = `
     <div style="min-width: 0;">
       <div><strong>${p.name}</strong></div>
-      <div style="opacity:.8;">${p.category.toUpperCase()} • ${Number(p.volume_liters).toFixed(3)} L</div>
+      <div style="opacity:.8;">${String(p.category || "").toUpperCase()} • ${Number(p.volume_liters || 0).toFixed(3)} L</div>
       <div style="opacity:.9; margin-top:6px;">Totale riga: <strong>${formatEUR(lineTotalCents)}</strong></div>
     </div>
 
@@ -33,23 +40,42 @@ function lineItemRow(p, qty, lineTotalCents) {
   return row;
 }
 
+function normalizeCartItems(items) {
+  // Somma qty per productId e rimuove qty <= 0
+  const map = new Map();
+  for (const it of (items || [])) {
+    const id = it?.productId;
+    const qty = Math.max(0, Math.floor(Number(it?.qty || 0)));
+    if (!id || qty <= 0) continue;
+    map.set(id, (map.get(id) || 0) + qty);
+  }
+  return [...map.entries()].map(([productId, qty]) => ({ productId, qty }));
+}
+
+async function requireLoginOrRedirect(supabase, nextUrl) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) return session;
+
+  localStorage.setItem(POST_LOGIN_CHECKOUT_KEY, "1");
+  location.replace(`/login.html?next=${encodeURIComponent(nextUrl)}`);
+  return null;
+}
+
 async function startCheckout(supabase) {
-  const statusEl = qs("#cart-status");
   const btn = qs("#btn-checkout");
   if (btn) btn.disabled = true;
-  if (statusEl) statusEl.textContent = "Avvio checkout in corso...";
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    // Non loggato: salva intento checkout e vai al login
-    localStorage.setItem(POST_LOGIN_CHECKOUT_KEY, "1");
-    location.replace(`/login.html?next=${encodeURIComponent("/carrello.html")}`);
-    return;
-  }
+  setStatus("Avvio checkout in corso...");
+
+  // Login solo al checkout
+  const session = await requireLoginOrRedirect(supabase, "/carrello.html");
+  if (!session) return;
 
   const cart = readCart();
-  if (!cart.items.length) {
-    if (statusEl) statusEl.textContent = "Il carrello è vuoto.";
+  const items = normalizeCartItems(cart.items);
+
+  if (!items.length) {
+    setStatus("Il carrello è vuoto.", true);
     if (btn) btn.disabled = false;
     return;
   }
@@ -61,53 +87,48 @@ async function startCheckout(supabase) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({ items: cart.items })
+      body: JSON.stringify({ items })
     });
 
     const payload = await res.json().catch(() => ({}));
 
     if (!res.ok || !payload?.ok || !payload?.url) {
       const msg = payload?.error || `Errore checkout (HTTP ${res.status})`;
-      if (statusEl) {
-        statusEl.textContent = msg;
-        statusEl.style.color = "crimson";
-      }
+      setStatus(msg, true);
       if (btn) btn.disabled = false;
       return;
     }
 
-    // Redirect a Stripe Checkout
     location.href = payload.url;
   } catch (e) {
     console.error(e);
-    if (statusEl) {
-      statusEl.textContent = "Errore di rete durante il checkout.";
-      statusEl.style.color = "crimson";
-    }
+    setStatus("Errore di rete durante il checkout.", true);
     if (btn) btn.disabled = false;
   }
 }
 
 (async () => {
-  const statusEl = qs("#cart-status");
   const itemsEl = qs("#cart-items");
   const totalEl = qs("#cart-total");
   const btnCheckout = qs("#btn-checkout");
 
+  const supabase = await getSupabase();
+
+  // Carica carrello
   const cart = readCart();
-  if (!cart.items.length) {
-    if (statusEl) statusEl.textContent = "Il carrello è vuoto.";
+  const items = normalizeCartItems(cart.items);
+
+  if (!items.length) {
+    setStatus("Il carrello è vuoto.");
     if (totalEl) totalEl.textContent = "";
     if (btnCheckout) btnCheckout.disabled = true;
     return;
   }
 
-  if (statusEl) statusEl.textContent = "Caricamento carrello...";
+  setStatus("Caricamento carrello...");
 
-  const supabase = await getSupabase();
-  const { role } = await getCurrentUserRole();
-
-  const ids = cart.items.map(i => i.productId);
+  // Carica prodotti dal DB (serve SELECT anon/auth su products)
+  const ids = items.map(i => i.productId);
 
   const { data: products, error } = await supabase
     .from("products")
@@ -116,10 +137,7 @@ async function startCheckout(supabase) {
 
   if (error) {
     console.error(error);
-    if (statusEl) {
-      statusEl.textContent = "Errore caricamento carrello.";
-      statusEl.style.color = "crimson";
-    }
+    setStatus("Errore caricamento carrello.", true);
     if (btnCheckout) btnCheckout.disabled = true;
     return;
   }
@@ -132,40 +150,40 @@ async function startCheckout(supabase) {
     itemsEl.innerHTML = "";
     let total = 0;
 
-    const current = readCart().items;
+    const current = normalizeCartItems(readCart().items);
 
     for (const item of current) {
       const p = map.get(item.productId);
 
-      // prodotto mancante o non attivo: lo segnaliamo e lo escludiamo dal totale
       if (!p || p.active !== true) {
         const warn = document.createElement("div");
         warn.style.border = "1px solid rgba(0,0,0,.12)";
         warn.style.borderRadius = "12px";
         warn.style.padding = "12px";
-        warn.innerHTML = `<strong>Prodotto non disponibile</strong><div style="opacity:.8;">Rimuovilo dal carrello per procedere.</div>`;
+        warn.innerHTML = `
+          <strong>Prodotto non disponibile</strong>
+          <div style="opacity:.8;">Rimuovilo dal carrello per procedere.</div>
+        `;
         itemsEl.appendChild(warn);
         continue;
       }
 
-      const unit = priceForRole(p.price_cents, role);
-      const line = unit * item.qty;
-      total += line;
+      const unit = Number(p.price_cents || 0);
+      const qty = Math.max(0, Math.floor(Number(item.qty || 0)));
+      const line = unit * qty;
 
-      itemsEl.appendChild(lineItemRow(p, item.qty, line));
+      total += line;
+      itemsEl.appendChild(lineItemRow(p, qty, line));
     }
 
     totalEl.textContent = `Totale: ${formatEUR(total)}`;
-    if (statusEl) {
-      statusEl.textContent = role === "retailer"
-        ? "Prezzi rivenditore (-10%) applicati."
-        : "Controlla quantità e procedi al checkout.";
-      statusEl.style.color = "inherit";
-    }
 
-    // Enable checkout solo se totale > 0
+    // checkout solo se totale > 0
     if (btnCheckout) btnCheckout.disabled = total <= 0;
 
+    setStatus("Controlla quantità e procedi al checkout.");
+
+    // bind qty
     itemsEl.querySelectorAll("input[data-qty]").forEach(inp => {
       inp.addEventListener("change", () => {
         const id = inp.getAttribute("data-qty");
@@ -175,25 +193,25 @@ async function startCheckout(supabase) {
       });
     });
 
+    // bind remove
     itemsEl.querySelectorAll("button[data-remove]").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-remove");
         removeItem(id);
-        location.reload();
+        render();
       });
     });
   }
 
   render();
 
-  // click checkout
+  // Checkout
   btnCheckout?.addEventListener("click", () => startCheckout(supabase));
 
-  // se l'utente è tornato dal login e aveva chiesto checkout, riparti automaticamente
+  // Auto-checkout post login
   const post = localStorage.getItem(POST_LOGIN_CHECKOUT_KEY);
   if (post === "1") {
     localStorage.removeItem(POST_LOGIN_CHECKOUT_KEY);
-    // avvio automatico checkout (solo se il bottone non è disabilitato)
     if (!btnCheckout?.disabled) startCheckout(supabase);
   }
 })();
