@@ -38,9 +38,14 @@
   align-items:center;
 }
 .brand__logo{
-  height: 50px;
+  height: 100px; /* più grande */
   width: auto;
 }
+
+@media (max-width: 480px){
+  .brand__logo{ height: 100px; }
+}
+
 
 /* Icon button (carrello + menu) */
 .icon-btn{
@@ -103,9 +108,9 @@
   background-image: url("/images/Logo_nero_trasparente.png");
   background-repeat: no-repeat;
   background-position: center 38%;
-  background-size: min(1100px, 92vw);
-  opacity: .06;
-  filter: invert(1);
+  background-size: min(860px, 78vw);
+  opacity: .045;
+  filter: invert(1) brightness(1.25) contrast(.95); /* più chiaro, meno pesante */
   pointer-events: none;
 }
 
@@ -158,7 +163,7 @@
   text-decoration: none;
 }
 .menu__brand-logo{
-  height: 54px;
+  height: 200px;
   width: auto;
   filter: invert(1);
   opacity: .95;
@@ -203,11 +208,42 @@
 
 .menu-col__title{
   margin: 0 0 18px;
-  font-size: 14px;
-  letter-spacing: .22em;
-  font-weight: 800;
+  font-size: 16px;          /* più grande */
+  letter-spacing: .20em;
+  font-weight: 850;
   color: rgba(255,255,255,.92);
+
+  position: relative;
+  display: inline-block;    /* serve per underline pulita */
+  padding-bottom: 6px;
 }
+/* underline oro per i titoli */
+.menu-col__title::after{
+  content:"";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms ease, opacity 240ms ease;
+  opacity: .95;
+}
+
+/* evidenziazione titolo su hover (desktop) e su touch (mobile) */
+.menu-col:hover .menu-col__title,
+.menu-col:active .menu-col__title{
+  color: var(--gold);
+}
+
+.menu-col:hover .menu-col__title::after,
+.menu-col:active .menu-col__title::after{
+  transform: scaleX(1);
+}
+
+
 
 .menu-col__link{
   display: block;
@@ -277,4 +313,193 @@
 html:has(.menu[open]){
   overflow: hidden;
 }
+
+
+
+/* =========================
+   MENU ANIMATIONS + POLISH
+   (entrata + uscita)
+========================= */
+
+/* Durata unica (JS può leggerla se vuoi allineare i timeout) */
+:root{
+  --menu-anim-ms: 520ms;
+}
+
+/* OVERLAY */
+.menu__panel{
+  /* stato base (chiuso) */
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+
+  transition:
+    opacity var(--menu-anim-ms) ease,
+    transform calc(var(--menu-anim-ms) + 80ms) cubic-bezier(.2,.9,.2,1);
+
+  will-change: opacity, transform;
+}
+
+/* quando <details open> */
+.menu[open] .menu__panel{
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* contenuto interno */
+.menu__inner{
+  opacity: 0;
+  transform: translateY(18px);
+
+  transition:
+    opacity calc(var(--menu-anim-ms) + 120ms) ease 90ms,
+    transform calc(var(--menu-anim-ms) + 220ms) cubic-bezier(.2,.9,.2,1) 90ms;
+
+  will-change: opacity, transform;
+}
+
+.menu[open] .menu__inner{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* logo top */
+.menu__brand-logo{
+  transform: translateY(-6px);
+  opacity: 0;
+
+  transition:
+    transform calc(var(--menu-anim-ms) + 200ms) cubic-bezier(.2,.9,.2,1) 120ms,
+    opacity calc(var(--menu-anim-ms) + 100ms) ease 120ms;
+}
+
+.menu[open] .menu__brand-logo{
+  transform: translateY(0);
+  opacity: .95;
+}
+
+/* colonne: stagger leggero */
+.menu-col{
+  transform: translateY(12px);
+  opacity: 0;
+
+  transition:
+    transform calc(var(--menu-anim-ms) + 200ms) cubic-bezier(.2,.9,.2,1),
+    opacity calc(var(--menu-anim-ms) + 120ms) ease;
+
+  will-change: transform, opacity;
+}
+
+.menu[open] .menu-col{
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.menu[open] .menu-col:nth-child(1){ transition-delay: 140ms; }
+.menu[open] .menu-col:nth-child(2){ transition-delay: 200ms; }
+.menu[open] .menu-col:nth-child(3){ transition-delay: 260ms; }
+.menu[open] .menu-col:nth-child(4){ transition-delay: 320ms; }
+
+/* underline elegante + hover */
+.menu-col__link,
+.menu__social-link,
+.menu__contacts{
+  position: relative;
+  text-decoration: none;
+}
+
+/* linea */
+.menu-col__link::after,
+.menu__social-link::after,
+.menu__contacts::after{
+  content:"";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+
+  /* se vuoi effetto “oro” al posto del bianco:
+     background: rgba(198,165,91,.85); */
+  background: rgba(255,255,255,.68);
+
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms ease;
+  opacity: .90;
+}
+
+.menu-col__link{
+  transition: transform 220ms ease, color 220ms ease;
+}
+
+.menu-col__link:hover,
+.menu__social-link:hover{
+  color: rgba(255,255,255,.95);
+}
+
+.menu-col__link:hover::after,
+.menu__social-link:hover::after,
+.menu__contacts:hover::after{
+  transform: scaleX(1);
+}
+
+.menu-col__link:hover{
+  transform: translateX(2px);
+}
+
+/* tasto X premium */
+.menu[open] > summary{
+  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease;
+}
+.menu[open] > summary:hover{
+  background: rgba(0,0,0,.34);
+  border-color: rgba(255,255,255,.20);
+  transform: translateY(-1px);
+}
+
+/* watermark fade */
+.menu__panel::before{
+  transition: opacity calc(var(--menu-anim-ms) + 200ms) ease;
+}
+.menu[open] .menu__panel::before{
+  opacity: .07;
+}
+
+/* =========================
+   CHIUSURA ANIMATA (JS)
+========================= */
+.menu__panel.is-closing{
+  opacity: 0 !important;
+  transform: translateY(-10px) !important;
+  pointer-events: none !important;
+}
+
+/* durante closing, fai rientrare anche il contenuto */
+.menu__panel.is-closing .menu__inner{
+  opacity: 0 !important;
+  transform: translateY(18px) !important;
+}
+
+/* (opzionale) disattiva lo stagger in chiusura per evitare “salti” */
+.menu__panel.is-closing .menu-col{
+  transition-delay: 0ms !important;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .menu__panel,
+  .menu__inner,
+  .menu__brand-logo,
+  .menu-col,
+  .menu-col__link,
+  .menu-col__link::after,
+  .menu__social-link::after,
+  .menu__contacts::after{
+    transition: none !important;
+  }
+}
+
+
 
