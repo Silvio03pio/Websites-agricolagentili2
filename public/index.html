@@ -1,31 +1,88 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agricola Gentili 2</title>
-  <!--importa tutti i css che la pagina usa-->
+  <title>Agricola Gentili</title>
+
+  <!-- CSS global + CSS pagina -->
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/index.css">
 </head>
 
-<body>
+<body class="page-index">
 
-<header id="dynamic-header"></header>
+  <!-- Header (overlay sul video) -->
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
 
-<main class="container">
-  <h1>Agricola Gentili 2</h1>
-  <p>Test Vercel dev:</p>
-  <ul>
-    <li><a href="/api/health">API Health</a></li>
-  </ul>
-</main>
+      <!-- Menu (alto sinistra) -->
+      <details class="menu" aria-label="Menu principale">
+        <summary class="icon-btn menu__summary" aria-label="Apri menu">
+          <!-- Hamburger icon (SVG) -->
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </summary>
 
-<footer id="dynamic-footer"></footer>
+        <div class="menu__panel">
+          <nav class="menu__nav" aria-label="Navigazione">
+            <a class="menu__link" href="/index.html">Home</a>
+            <a class="menu__link" href="/negozio.html">Negozio</a>
+            <a class="menu__link" href="/carrello.html">Carrello</a>
+            <a class="menu__link" href="/contatti.html">Contatti</a>
+            <a class="menu__link" href="/login.html">Area Rivenditori</a>
+          </nav>
+        </div>
+      </details>
 
-<!-- Load header and footer dynamically -->
-<script src="/js/header.js"></script>
-<script src="/js/footer.js"></script>
+      <!-- Destra: carrello + logo -->
+      <div class="site-header__right">
+        <a class="icon-btn" href="/carrello.html" aria-label="Apri carrello">
+          <!-- Bag icon (SVG) -->
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 9V7a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M6.5 9h11l1 12.5H5.5L6.5 9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </a>
+
+        <a class="brand" href="/index.html" aria-label="Agricola Gentili - Home">
+          <img class="brand__logo" src="/img/Logo_nero_trasparente.png" alt="Agricola Gentili">
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero fullscreen con video background -->
+  <main class="hero" role="main" aria-label="Ingresso">
+    <video
+      class="hero__video"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      poster="/img/hero-poster.jpg"
+    >
+      <!-- Sostituisci con il tuo video -->
+      <source src="/video/hero.mp4" type="video/mp4" />
+    </video>
+
+    <div class="hero__overlay" aria-hidden="true"></div>
+
+    <div class="hero__content">
+      <div class="hero__logo-wrap" aria-label="Agricola Gentili">
+        <img class="hero__logo" src="/img/Logo_nero_trasparente.png" alt="Agricola Gentili">
+      </div>
+    </div>
+  </main>
+
+  <!-- Lingua (basso destra) - UI only, poi colleghiamo la logica -->
+  <nav class="lang-switch" aria-label="Selezione lingua">
+    <a class="lang-switch__link is-active" href="/?lang=it" lang="it">IT</a>
+    <span class="lang-switch__sep" aria-hidden="true">/</span>
+    <a class="lang-switch__link" href="/?lang=en" lang="en">EN</a>
+  </nav>
 
 </body>
 </html>
