@@ -1,81 +1,90 @@
-/* Header overlay (alto) */
+/* Header: full width, non limitato dal container */
 .site-header{
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   z-index: 50;
-
-  /* Leggibilità sopra video */
-  background: linear-gradient(
-    to bottom,
-    rgba(251,250,247,.82),
-    rgba(251,250,247,.35),
-    rgba(251,250,247,0)
-  );
+  pointer-events: auto;
+  background: none;
 }
 
+/* IMPORTANTE: rimuove l’effetto “contenitore” */
 .site-header__inner{
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: 14px var(--pad);
+  max-width: none;          /* <- prima era var(--container) */
+  margin: 0;
+  padding: 18px clamp(16px, 3vw, 44px);
 
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap: 14px;
 }
-
 .site-header__right{
   display:flex;
   align-items:center;
   gap: 10px;
 }
 
-/* Brand logo (alto destra) */
+* Brand in alto a destra con “pill” chiara per far leggere il logo nero */
 .brand{
   display:inline-flex;
   align-items:center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(251,250,247,.65);
+  border: 1px solid rgba(255,255,255,.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-.brand__logo{
-  height: 100px; /* più grande */
-  width: auto;
-}
+.brand__logo{ height: 34px; width: auto; }
+
 
 @media (max-width: 480px){
   .brand__logo{ height: 100px; }
 }
 
 
-/* Icon button (carrello + menu) */
+/* Icone: coerenti col tema (gold) */
 .icon-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 999px;
-  border: 1px solid rgba(31,35,40,.12);
-  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(162,143,87,.28);
+  background: rgba(0,0,0,.22);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-.icon-btn:hover{
-  background: rgba(255,255,255,.75);
-  text-decoration:none;
-}
-.icon{
-  width: 20px;
-  height: 20px;
-  color: rgba(31,35,40,.86);
-}
+.icon-btn:hover{ background: rgba(0,0,0,.35); }
+
+/* SVG usa currentColor */
+.icon{ width: 20px; height: 20px; color: var(--gold); }
+
 
 /* =========================
    MEGA MENU OVERLAY
 ========================= */
 
+/* MENU dropdown: pannello più largo e “importante” */
+.menu__top{
+  position: relative;
+  padding-top: 10px;
+  padding-bottom: 18px;
+  margin-top: 200px;
+  margin-right: 600px;
+  margin-left: 600px;
+}
+
 .menu{
   position: relative;
+}
+.menu > summary{
+  list-style: none;
+  cursor: pointer;
+}
+.menu > summary::-webkit-details-marker{
+  display: none;
 }
 
 /* Il summary diventa il tasto in alto a sinistra */
@@ -83,29 +92,69 @@
   list-style: none;
   cursor: pointer;
 }
-.menu > summary::-webkit-details-marker{ display:none; }
+.menu > summary::-webkit-details-marker{
+  display: none;
+}
 
 /* Icon toggle: hamburger vs close */
-.icon--close{ display:none; }
-.menu[open] .icon--hamb{ display:none; }
-.menu[open] .icon--close{ display:block; }
+.icon--close{
+  display: none;
+}
+.menu[open] .icon--hamb{
+  display: none;
+}
+.menu[open] .icon--close{
+  display: block;
+}
 
-/* Overlay full-screen */
+/* Pannello full width (stile “overlay” elegante) */
 .menu__panel{
   position: fixed;
-  inset: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  top: 0px;
+  padding: 18px 0;
+  overflow: auto;
+}
 
-  background: #070708;
-  color: rgba(255,255,255,.92);
+/* Nav centrata, ma header resta full width */
+.menu__nav{
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3vw, 44px);
+
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px 26px;
+}
+
+/* Link menu: EXACT style reference */
+.menu__link{
+  font-size: var(--caps-size);
+  font-weight: var(--caps-weight);
+  font-family: var(--font-ui);
+  color: var(--gold);
+  letter-spacing: var(--caps-track);
+  text-transform: uppercase;
+  line-height: 1;
+  text-decoration: none;
+
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.menu__link:hover{
+  border-color: rgba(162,143,87,.35);
+  background: rgba(162,143,87,.08);
+  text-decoration: none;
 }
 
 /* Watermark ornamentale (opzionale) */
 .menu__panel::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background-image: url("/images/Logo_nero_trasparente.png");
+  content: "";
+  position: absolute;
+  inset: 0;
   background-repeat: no-repeat;
   background-position: center 38%;
   background-size: min(860px, 78vw);
@@ -116,25 +165,27 @@
 
 /* Velo per profondità */
 .menu__panel::after{
-  content:"";
-  position:absolute;
-  inset:0;
+  content: "";
+  position: absolute;
+  inset: 0;
   background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.08), rgba(0,0,0,.88) 70%);
-  pointer-events:none;
+  pointer-events: none;
 }
 
 .menu__inner{
   position: relative;
   z-index: 1;
 
-  max-width: 1200px;
+  max-width: none;
+  width: min(1600px, 96vw);          /* grande ma controllato */
   margin: 0 auto;
-  padding: 28px var(--pad) 22px;
-
-  min-height: 100svh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  padding-left: clamp(16px, 4vw, 72px);
+  padding-right: clamp(16px, 4vw, 72px);
+  min-height: 100svh;            /* fondamentale */
+  display: flex;                 /* fondamentale */
+  flex-direction: column;        /* fondamentale */
 }
+
 
 /* Posizionamento del tasto X: lo summary deve restare cliccabile sopra overlay */
 .menu[open] > summary{
@@ -170,45 +221,68 @@
 }
 
 .menu__langs{
-  position: absolute;
-  top: 8px;
-  right: 0;
-
+  position: static;          /* niente absolute */
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: column;    /* come reference: lista verticale */
+  gap: 6px;
   text-align: right;
+  margin-right: 10px;        /* distanza dal carrello */
 }
+
 .menu__lang{
-  font-size: 12px;
-  letter-spacing: .14em;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,.78);
+  font-family: var(--font-ui);
+  color: var(--gold);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  line-height: 1;
+  opacity: .85;
   text-decoration: none;
 }
-.menu__lang:hover{ color: rgba(255,255,255,.95); text-decoration:none; }
-.menu__lang.is-active{ color: rgba(255,255,255,.98); }
+
+.menu__lang:hover{
+  opacity: 1;
+}
+.menu__lang.is-active{
+  opacity: 1;
+}
+
+/* Mobile: resta vicino al carrello e non “sfora” */
+@media (max-width: 520px){
+  .menu__langs{
+    gap: 5px;
+    margin-right: 8px;
+  }
+  .menu__lang{
+    font-size: 10px; /* leggermente più compatto */
+  }
+}
 
 /* Griglia 4 colonne */
 .menu__grid{
   align-self: center;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(18px, 3vw, 44px);
+  gap: clamp(14px, 2.2vw, 28px);
 
   padding: 18px 0 12px;
 }
 
 /* Separatore verticale tra colonne (stile reference) */
 .menu-col{
-  padding: 8px 18px;
+  padding: 25px 18px;
   border-right: 1px solid rgba(255,255,255,.10);
+  border-top: 610px solid transparent; /* evita “salti” altezza su hover */
+
 }
-.menu-col:last-child{ border-right: 0; }
+.menu-col:last-child{
+  border-right: 0;
+}
 
 .menu-col__title{
   margin: 0 0 18px;
-  font-size: 16px;          /* più grande */
+  font-size: 30px;          /* più grande */
   letter-spacing: .20em;
   font-weight: 850;
   color: rgba(255,255,255,.92);
@@ -217,9 +291,10 @@
   display: inline-block;    /* serve per underline pulita */
   padding-bottom: 6px;
 }
+
 /* underline oro per i titoli */
 .menu-col__title::after{
-  content:"";
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -243,75 +318,130 @@
   transform: scaleX(1);
 }
 
-
-
 .menu-col__link{
   display: block;
   padding: 8px 0;
   font-size: 16px;
   color: rgba(255,255,255,.62);
   text-decoration: none;
+  font-size: 20px;
 }
 .menu-col__link:hover{
   color: rgba(255,255,255,.95);
   text-decoration: none;
 }
 
-/* Bottom: social + contatti */
+/* Bottom: social + contatti — sempre in fondo */
 .menu__bottom{
-  border-top: 1px solid rgba(255,255,255,.10);
+  margin-top: auto;                 /* fondamentale: spinge in basso */
+  border-top: 0 !important;         /* niente riga */
   padding-top: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
 
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: center;          /* più “reference-like” */
+  gap: 18px;
   flex-wrap: wrap;
+
+  /* (opzionale ma consigliato) lo mantiene visibile se scrolli */
+  position: sticky;
+  bottom: 0;
+
+  /* sfondo per leggibilità sopra contenuto */
+  background: linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0));
 }
+
 
 .menu__social{
   display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.menu__social-link{
-  font-size: 12px;
-  letter-spacing: .10em;
-  color: rgba(255,255,255,.62);
-  text-decoration: none;
-}
-.menu__social-link:hover{
-  color: rgba(255,255,255,.95);
-  text-decoration: none;
+  align-items: center;
+  gap: 18px;
 }
 
-.menu__contacts{
-  font-size: 12px;
+/* Link social: caps gold (coerente con reference) */
+.menu__social-link{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: .22em;
-  font-weight: 800;
-  color: rgba(255,255,255,.88);
+  text-transform: uppercase;
+
+  color: var(--gold);
   text-decoration: none;
+  opacity: .85;
 }
-.menu__contacts:hover{
-  color: rgba(255,255,255,.98);
+.menu__social-link:hover{ opacity: 1; }
+
+/* Se dentro c’è una SVG icona */
+.menu__social-link svg{
+  width: 16px;
+  height: 16px;
+  color: var(--gold);
+}
+
+
+.menu__contacts{
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+
+  color: var(--gold);
   text-decoration: none;
+  opacity: .92;
 }
+.menu__contacts:hover{ opacity: 1; }
 
 /* Responsive: da 4 colonne a 2, poi a 1 */
 @media (max-width: 980px){
-  .menu__grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .menu-col:nth-child(2){ border-right: 0; }
+  .menu__grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .menu-col:nth-child(2){
+    border-right: 0;
+  }
 }
 @media (max-width: 560px){
-  .menu__brand-logo{ height: 44px; }
-  .menu__grid{ grid-template-columns: 1fr; }
-  .menu-col{ border-right: 0; border-bottom: 1px solid rgba(255,255,255,.10); padding: 14px 0; }
-  .menu-col:last-child{ border-bottom: 0; }
+  .menu__brand-logo{
+    height: 44px;
+  }
+  .menu__grid{
+    grid-template-columns: 1fr;
+  }
+  .menu-col{
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    padding: 14px 0;
+  }
+  .menu-col:last-child{
+    border-bottom: 0;
+  }
 }
 
 /* (Opzionale) blocco scroll quando menu è aperto (supporto browser moderni) */
 html:has(.menu[open]){
   overflow: hidden;
+}
+
+/* Mobile: menu più “verticale” */
+@media (max-width: 520px){
+  .menu__nav{
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .menu__link{
+    width: 100%;
+    text-align: left;
+    border-radius: 12px;
+  }
+  .brand__logo{
+    height: 30px;
+  }
 }
 
 

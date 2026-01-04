@@ -1,24 +1,83 @@
-/* Footer base */
-.site-footer,
-#dynamic-footer{
-  border-top: 1px solid var(--border);
-  margin-top: 48px;
-  padding: 40px 0;
-  background: rgba(251,250,247,.92);
+.site-footer{
+  background: #050505;
+  color: var(--gold);
+  padding: 46px 0 38px;
+  position: relative;
+  overflow: hidden;
+  margin-top: auto;
 }
 
-/* Inner (se nel partial inserisci un wrapper) */
+/* leggero “sfondo” astratto (placeholder elegante) */
+.site-footer::before{
+  content:"";
+  position:absolute;
+  inset:-30%;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(162,143,87,.10), transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(162,143,87,.06), transparent 60%);
+  opacity: .9;
+  pointer-events:none;
+  margin-top: auto;
+}
+
 .site-footer__inner{
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: 0 var(--pad);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 clamp(16px, 3vw, 44px);
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 16px;
+  margin-top: auto;
 }
 
-/* Link footer */
-.site-footer a{
-  color: rgba(31,35,40,.92);
+/* icone + link */
+.site-footer__icon{
+  width: 18px;
+  height: 18px;
 }
-.site-footer a:hover{
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.site-footer__search,
+.site-footer__social-link{
+  color: var(--gold);
+  text-decoration:none;
+  opacity: .92;
+}
+.site-footer__search:hover,
+.site-footer__social-link:hover{
+  opacity: 1;
+}
+
+/* linea come reference */
+.site-footer__rule{
+  width: min(780px, 92vw);
+  height: 1px;
+  background: rgba(162,143,87,.28);
+}
+
+/* social row */
+.site-footer__social{
+  display:flex;
+  align-items:center;
+  gap: 18px;
+}
+
+/* titolo footer: EXACT style reference */
+.site-footer__title{
+  font-size: var(--caps-size);
+  font-style: normal;
+  font-weight: var(--caps-weight);
+  font-family: var(--font-ui);
+  color: var(--gold);
+  text-align: center;
+  line-height: 1;
+  letter-spacing: var(--caps-track);
+  text-transform: uppercase;
+}
+
+/* Mobile coherence */
+@media (max-width: 520px){
+  .site-footer{ padding: 40px 0 32px; }
+  .site-footer__rule{ width: min(520px, 92vw); }
 }
