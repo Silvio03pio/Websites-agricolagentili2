@@ -42,24 +42,31 @@
   padding: 96px 16px 64px; /* lascia aria a header + lingua */
 }
 
-/* Wrap “glass” per far leggere bene il logo nero su video */
-.hero__logo-wrap{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background: rgba(251,250,247,.78);
-  border: 1px solid rgba(31,35,40,.10);
-  box-shadow: 0 18px 45px rgba(0,0,0,.18);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* Contenuto centrato (logo) */
+.hero__content{
+  position: relative;
+  z-index: 2;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 96px 16px 64px; /* aria per header e lingua */
 }
 
+/* Logo direttamente sopra il video (senza contenitore) */
 .hero__logo{
-  width: min(520px, 72vw);
+  width: min(520px, 78vw);
   height: auto;
+
+  /* Migliora leggibilità senza box/container */
+  filter:
+    drop-shadow(0 0 10px rgba(255,255,255,.55))
+    drop-shadow(0 18px 40px rgba(0,0,0,.35));
+
+  /* opzionale: evita selezione/click involontari */
+  user-select: none;
+  pointer-events: none;
 }
+
 
 /* Lingua bottom-right */
 .lang-switch{
